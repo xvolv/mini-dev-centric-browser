@@ -1,0 +1,22 @@
+{
+  "name": "mini-dev-centric-browser",
+  "version": "1.0.0",
+  "description": "A developer-focused desktop browser with integrated dev tools",
+  "main": "main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build && electron-builder",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "electron": "^33.3.1",
+    "vite": "^6.1.0",
+    "wait-on": "^8.0.3"
+  }
+}
