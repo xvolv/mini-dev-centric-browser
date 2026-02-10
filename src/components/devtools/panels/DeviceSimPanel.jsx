@@ -1,19 +1,35 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { DEVICE_PRESETS } from '../../../data/devicePresets';
 
-export default function DeviceSimPanel() {
-  const [selectedDevice, setSelectedDevice] = useState('iPhone 12');
-  const [orientation, setOrientation] = useState('portrait');
-  const [customW, setCustomW] = useState(390);
-  const [customH, setCustomH] = useState(844);
+export default function DeviceSimPanel({ value, onChange }) {
+  const {
+    enabled = false,
+    deviceName = 'iPhone 12',
+    width = 390,
+    height = 844,
+    orientation = 'portrait',
+  } = value || {};
 
-  const device = DEVICE_PRESETS.find((d) => d.name === selectedDevice);
+  const device = DEVICE_PRESETS.find((d) => d.name === deviceName);
+
+  const update = (patch) => {
+    if (!onChange) return;
+    onChange({
+      enabled,
+      deviceName,
+      width,
+      height,
+      orientation,
+      ...patch,
+    });
+  };
 
   const handleSelect = (d) => {
-    setSelectedDevice(d.name);
-    setCustomW(d.w);
-    setCustomH(d.h);
+    update({ enabled: true, deviceName: d.name, width: d.w, height: d.h });
   };
+
+  const displayW = orientation === 'portrait' ? width : height;
+  const displayH = orientation === 'portrait' ? height : width;
 
   return (
     <div className="tool-panel">
@@ -22,7 +38,7 @@ export default function DeviceSimPanel() {
           {DEVICE_PRESETS.map((d) => (
             <button
               key={d.name}
-              className={`device-sim__preset ${selectedDevice === d.name ? 'device-sim__preset--active' : ''}`}
+              className={`device-sim__preset ${deviceName === d.name ? 'device-sim__preset--active' : ''}`}
               onClick={() => handleSelect(d)}
             >
               {d.name}
@@ -30,34 +46,54 @@ export default function DeviceSimPanel() {
           ))}
         </div>
         <div className="device-sim__dimensions">
-          <input className="device-sim__dim-input" type="number" value={customW} onChange={(e) => setCustomW(+e.target.value)} />
+          <input
+            className="device-sim__dim-input"
+            type="number"
+            value={width}
+            onChange={(e) => update({ enabled: true, deviceName: 'Custom', width: Number(e.target.value) })}
+          />
           <span>×</span>
-          <input className="device-sim__dim-input" type="number" value={customH} onChange={(e) => setCustomH(+e.target.value)} />
+          <input
+            className="device-sim__dim-input"
+            type="number"
+            value={height}
+            onChange={(e) => update({ enabled: true, deviceName: 'Custom', height: Number(e.target.value) })}
+          />
           <span>px</span>
           <span style={{ margin: '0 4px' }}>|</span>
           <button
             className={`device-sim__preset ${orientation === 'portrait' ? 'device-sim__preset--active' : ''}`}
-            onClick={() => setOrientation('portrait')}
+            onClick={() => update({ enabled: true, orientation: 'portrait' })}
           >
             Portrait
           </button>
           <button
             className={`device-sim__preset ${orientation === 'landscape' ? 'device-sim__preset--active' : ''}`}
-            onClick={() => setOrientation('landscape')}
+            onClick={() => update({ enabled: true, orientation: 'landscape' })}
           >
             Landscape
+          </button>
+          <span style={{ margin: '0 4px' }}>|</span>
+          <button
+            className={`device-sim__preset ${enabled ? 'device-sim__preset--active' : ''}`}
+            onClick={() => update({ enabled: !enabled })}
+          >
+            {enabled ? 'Disable' : 'Enable'}
+          </button>
+          <button className="device-sim__preset" onClick={() => update({ enabled: false })}>
+            Reset
           </button>
         </div>
       </div>
       <div className="tool-panel__body">
         <div className="tool-panel__empty">
           <div className="tool-panel__empty-icon">📱</div>
-          <div className="tool-panel__empty-title">{selectedDevice}</div>
+          <div className="tool-panel__empty-title">{deviceName}</div>
           <div className="tool-panel__empty-desc">
-            {orientation === 'portrait' ? `${customW} × ${customH}` : `${customH} × ${customW}`} px
+            {displayW} × {displayH} px
             <br />Type: {device?.type || 'Custom'}
             <br />
-            <br />The browser viewport will resize to simulate this device when connected to a live page.
+            <br />{enabled ? 'Simulation is active for the current tab.' : 'Enable to resize the active tab viewport.'}
           </div>
         </div>
       </div>

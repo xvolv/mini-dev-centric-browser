@@ -17,6 +17,8 @@ export default function DevToolsPanel({
   onClearConsole,
   networkEntries,
   onClearNetwork,
+  deviceSim,
+  onDeviceSimChange,
 }) {
   const [panelWidth, setPanelWidth] = useState(420);
   const isResizing = useRef(false);
@@ -50,7 +52,7 @@ export default function DevToolsPanel({
       case 'sandbox':
         return <SandboxPanel />;
       case 'device':
-        return <DeviceSimPanel />;
+        return <DeviceSimPanel value={deviceSim} onChange={onDeviceSimChange} />;
       case 'ai':
         return <AiAssistantPanel />;
       case 'git':

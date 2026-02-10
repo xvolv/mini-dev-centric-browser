@@ -428,6 +428,31 @@ html, body, #root {
   border: none;
 }
 
+.browser-view__device-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(88,166,255,0.12), transparent 55%);
+}
+
+.browser-view__device-outer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.browser-view__device-frame {
+  background: #000;
+  border-radius: 18px;
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transform-origin: top left;
+}
+
 .browser-view__empty {
   display: flex;
   flex-direction: column;

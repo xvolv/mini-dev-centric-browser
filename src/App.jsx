@@ -17,6 +17,13 @@ export default function App() {
   const [canGoForward, setCanGoForward] = useState(false);
   const [networkLogs, setNetworkLogs] = useState({});
   const [consoleLogs, setConsoleLogs] = useState({});
+  const [deviceSim, setDeviceSim] = useState({
+    enabled: false,
+    deviceName: 'iPhone 12',
+    width: 390,
+    height: 844,
+    orientation: 'portrait',
+  });
   const webviewRefs = useRef({});
   const tabToWebContents = useRef(new Map());
   const webContentsToTab = useRef(new Map());
@@ -182,6 +189,7 @@ export default function App() {
           onTitleUpdate={handleTitleUpdate}
           onUrlUpdate={handleUrlUpdate}
           onNavStateChange={handleNavStateChange}
+          deviceSim={deviceSim}
           onConsoleMessage={(tabId, entry) => {
             const levelMap = {
               0: 'log',
@@ -218,6 +226,8 @@ export default function App() {
             onClearNetwork={() => {
               setNetworkLogs((prev) => ({ ...prev, [activeTabId]: [] }));
             }}
+            deviceSim={deviceSim}
+            onDeviceSimChange={setDeviceSim}
           />
         )}
       </div>

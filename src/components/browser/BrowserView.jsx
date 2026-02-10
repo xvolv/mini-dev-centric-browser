@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function BrowserView({
   tabs,
@@ -10,10 +10,42 @@ export default function BrowserView({
   onNavStateChange,
   onWebviewReady,
   onConsoleMessage,
+  deviceSim,
 }) {
   const webviewRefs = useRef({});
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const hasActiveUrl = Boolean(activeTab && activeTab.url);
+
+  const viewport = useMemo(() => {
+    if (!deviceSim?.enabled) return null;
+    const width = deviceSim.orientation === 'portrait' ? deviceSim.width : deviceSim.height;
+    const height = deviceSim.orientation === 'portrait' ? deviceSim.height : deviceSim.width;
+    return { width, height };
+  }, [deviceSim]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    const updateScale = () => {
+      if (!viewport) {
+        setScale(1);
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      const maxW = Math.max(0, rect.width - 24);
+      const maxH = Math.max(0, rect.height - 24);
+      const next = Math.min(1, maxW / viewport.width, maxH / viewport.height);
+      setScale(Number.isFinite(next) && next > 0 ? next : 1);
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [viewport]);
 
   useEffect(() => {
     const webview = webviewRefs.current[activeTabId];
@@ -72,41 +104,85 @@ export default function BrowserView({
   }
 
   return (
-    <div className="browser-view">
+    <div className="browser-view" ref={containerRef}>
       {isLoading && (
         <div className="browser-view__loading">
           <div className="browser-view__loading-bar" />
         </div>
       )}
-      <webview
-        key={activeTab.id}
-        src={activeTab.url}
-        style={{ width: '100%', height: '100%' }}
-        ref={(el) => {
-          if (!el) return;
-          webviewRefs.current[activeTab.id] = el;
-          if (!el.__devcentricConsoleAttached) {
-            el.__devcentricConsoleAttached = true;
-            el.addEventListener('console-message', (event) => {
-              onConsoleMessage?.(activeTab.id, {
-                level: event.level,
-                message: event.message,
-                line: event.line,
-                sourceId: event.sourceId,
+      {viewport ? (
+        <div className="browser-view__device-stage">
+          <div
+            className="browser-view__device-outer"
+            style={{ width: viewport.width * scale, height: viewport.height * scale }}
+          >
+            <div
+              className="browser-view__device-frame"
+              style={{ width: viewport.width, height: viewport.height, transform: `scale(${scale})` }}
+            >
+              <webview
+                key={activeTab.id}
+                src={activeTab.url}
+                style={{ width: '100%', height: '100%' }}
+                ref={(el) => {
+                  if (!el) return;
+                  webviewRefs.current[activeTab.id] = el;
+                  if (!el.__devcentricConsoleAttached) {
+                    el.__devcentricConsoleAttached = true;
+                    el.addEventListener('console-message', (event) => {
+                      onConsoleMessage?.(activeTab.id, {
+                        level: event.level,
+                        message: event.message,
+                        line: event.line,
+                        sourceId: event.sourceId,
+                      });
+                    });
+                  }
+                  if (!el.__devcentricReady) {
+                    el.__devcentricReady = true;
+                    el.addEventListener('dom-ready', () => {
+                      const webContentsId = el.getWebContentsId?.();
+                      if (typeof webContentsId === 'number') {
+                        onWebviewReady?.(activeTab.id, webContentsId, el);
+                      }
+                    });
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <webview
+          key={activeTab.id}
+          src={activeTab.url}
+          style={{ width: '100%', height: '100%' }}
+          ref={(el) => {
+            if (!el) return;
+            webviewRefs.current[activeTab.id] = el;
+            if (!el.__devcentricConsoleAttached) {
+              el.__devcentricConsoleAttached = true;
+              el.addEventListener('console-message', (event) => {
+                onConsoleMessage?.(activeTab.id, {
+                  level: event.level,
+                  message: event.message,
+                  line: event.line,
+                  sourceId: event.sourceId,
+                });
               });
-            });
-          }
-          if (!el.__devcentricReady) {
-            el.__devcentricReady = true;
-            el.addEventListener('dom-ready', () => {
-              const webContentsId = el.getWebContentsId?.();
-              if (typeof webContentsId === 'number') {
-                onWebviewReady?.(activeTab.id, webContentsId, el);
-              }
-            });
-          }
-        }}
-      />
+            }
+            if (!el.__devcentricReady) {
+              el.__devcentricReady = true;
+              el.addEventListener('dom-ready', () => {
+                const webContentsId = el.getWebContentsId?.();
+                if (typeof webContentsId === 'number') {
+                  onWebviewReady?.(activeTab.id, webContentsId, el);
+                }
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
