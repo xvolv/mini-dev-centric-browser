@@ -15,4 +15,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('network:event', listener);
         return () => ipcRenderer.removeListener('network:event', listener);
     },
+    selectRepo: () => ipcRenderer.invoke('git:selectRepo'),
+    gitStatus: (repoPath) => ipcRenderer.invoke('git:status', repoPath),
+    gitBranches: (repoPath) => ipcRenderer.invoke('git:branches', repoPath),
+    gitCommit: (repoPath, message) => ipcRenderer.invoke('git:commit', repoPath, message),
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+    githubDeviceCode: () => ipcRenderer.invoke('github:deviceCode'),
+    githubPoll: (deviceCode) => ipcRenderer.invoke('github:poll', deviceCode),
+    githubStatus: () => ipcRenderer.invoke('github:status'),
+    githubLogout: () => ipcRenderer.invoke('github:logout'),
+    githubListRepos: (page) => ipcRenderer.invoke('github:listRepos', page),
+    githubChooseCloneDir: () => ipcRenderer.invoke('github:chooseCloneDir'),
+    githubClone: (repoUrl, targetPath) => ipcRenderer.invoke('github:clone', repoUrl, targetPath),
 });
