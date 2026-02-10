@@ -11,6 +11,28 @@ const trackedWebContents = new Set();
 const requestStartTimes = new Map();
 let webRequestAttached = false;
 let githubToken = null;
+const AI_SETTINGS_FILE = () => path.join(app.getPath('userData'), 'ai_settings.json');
+
+function readAiSettings() {
+    try {
+        const raw = fs.readFileSync(AI_SETTINGS_FILE(), 'utf-8');
+        const data = JSON.parse(raw);
+        return {
+            enabled: data?.enabled !== false,
+            model: data?.model || 'llama-3.1-8b-instant',
+            apiKey: data?.apiKey || '',
+        };
+    } catch {
+        return { enabled: true, model: 'llama-3.1-8b-instant', apiKey: '' };
+    }
+}
+
+function writeAiSettings(next) {
+    const current = readAiSettings();
+    const payload = { ...current, ...next, savedAt: new Date().toISOString() };
+    fs.writeFileSync(AI_SETTINGS_FILE(), JSON.stringify(payload, null, 2));
+    return payload;
+}
 
 const GITHUB_AUTH_FILE = () => path.join(app.getPath('userData'), 'github_auth.json');
 
@@ -271,6 +293,46 @@ function createWindow() {
             const git = simpleGit();
             await git.clone(repoUrl, targetPath);
             return { ok: true };
+        } catch (error) {
+            return { ok: false, error: error?.message || String(error) };
+        }
+    });
+
+    ipcMain.handle('ai:getSettings', async () => {
+        return { ok: true, settings: readAiSettings() };
+    });
+
+    ipcMain.handle('ai:setSettings', async (_event, settings) => {
+        const saved = writeAiSettings(settings || {});
+        return { ok: true, settings: saved };
+    });
+
+    ipcMain.handle('ai:chat', async (_event, payload) => {
+        try {
+            const { apiKey, model, messages } = payload || {};
+            if (!apiKey) throw new Error('Missing Groq API key.');
+            if (!Array.isArray(messages) || messages.length === 0) {
+                throw new Error('No messages provided.');
+            }
+            const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: model || 'llama-3.1-8b-instant',
+                    messages,
+                    temperature: 0.2,
+                }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                const message = json?.error?.message || `Groq error (${res.status}).`;
+                return { ok: false, error: message };
+            }
+            const content = json?.choices?.[0]?.message?.content || '';
+            return { ok: true, content };
         } catch (error) {
             return { ok: false, error: error?.message || String(error) };
         }

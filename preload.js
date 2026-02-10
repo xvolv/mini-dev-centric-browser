@@ -27,4 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     githubListRepos: (page) => ipcRenderer.invoke('github:listRepos', page),
     githubChooseCloneDir: () => ipcRenderer.invoke('github:chooseCloneDir'),
     githubClone: (repoUrl, targetPath) => ipcRenderer.invoke('github:clone', repoUrl, targetPath),
+    aiChat: (payload) => ipcRenderer.invoke('ai:chat', payload),
+    aiGetSettings: () => ipcRenderer.invoke('ai:getSettings'),
+    aiSetSettings: (settings) => ipcRenderer.invoke('ai:setSettings', settings),
 });

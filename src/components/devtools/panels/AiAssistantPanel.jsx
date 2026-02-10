@@ -1,24 +1,67 @@
 import React, { useState } from 'react';
 
+const DEFAULT_MODEL = 'llama-3.1-8b-instant';
+
 export default function AiAssistantPanel() {
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "👋 Hi! I'm your AI debugging assistant. I can help explain errors, suggest fixes, and generate test cases. Ask me anything!" },
+    {
+      role: 'assistant',
+      text: "👋 Hi! I'm your AI debugging assistant. I can help explain errors, suggest fixes, and generate test cases. Ask me anything!",
+    },
   ]);
   const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: 'user', text: input }]);
-    setTimeout(() => {
+  const buildMessages = (items) => {
+    return items.map((msg) => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.text,
+    }));
+  };
+
+  const handleSend = async () => {
+    const question = input.trim();
+    if (!question) return;
+
+    setMessages((prev) => [...prev, { role: 'user', text: question }]);
+    setInput('');
+
+    const settingsRes = await window.electronAPI?.aiGetSettings?.();
+    const settings = settingsRes?.settings || { enabled: true, model: DEFAULT_MODEL, apiKey: '' };
+
+    if (!settings.enabled) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'ai',
-          text: "I'm in demo mode right now. Once connected to an AI API, I'll be able to:\n\n• Explain error messages\n• Suggest code fixes\n• Generate test cases\n• Help with debugging\n\nConfigure your API key in Settings to enable full AI capabilities.",
-        },
+        { role: 'assistant', text: 'AI is disabled in Settings.' },
       ]);
-    }, 500);
-    setInput('');
+      return;
+    }
+    if (!settings.apiKey) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: 'Add your Groq API key in Settings to enable AI.' },
+      ]);
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const payload = {
+        apiKey: settings.apiKey,
+        model: settings.model || DEFAULT_MODEL,
+        messages: buildMessages([...messages, { role: 'user', text: question }]),
+      };
+      const res = await window.electronAPI?.aiChat?.(payload);
+      if (!res?.ok) throw new Error(res?.error || 'AI request failed.');
+      setMessages((prev) => [...prev, { role: 'assistant', text: res.content || '(empty response)' }]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: `Error: ${error.message || String(error)}` },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -38,8 +81,9 @@ export default function AiAssistantPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          disabled={isSending}
         />
-        <button className="ai-assistant__send" onClick={handleSend}>➤</button>
+        <button className="ai-assistant__send" onClick={handleSend} disabled={isSending}>➤</button>
       </div>
     </div>
   );

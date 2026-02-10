@@ -1,9 +1,40 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+const MODEL_OPTIONS = [
+  { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
+  { value: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B Versatile' },
+  { value: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Distill 70B' },
+];
 
 export default function SettingsPanel() {
   const [darkMode, setDarkMode] = useState(true);
   const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiModel, setAiModel] = useState('llama-3.1-8b-instant');
+  const [apiKey, setApiKey] = useState('');
   const [autoSave, setAutoSave] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const res = await window.electronAPI?.aiGetSettings?.();
+      if (res?.ok && res.settings) {
+        setApiKey(res.settings.apiKey || '');
+        setAiModel(res.settings.model || aiModel);
+        setAiEnabled(res.settings.enabled !== false);
+      }
+      setLoaded(true);
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    window.electronAPI?.aiSetSettings?.({
+      apiKey,
+      model: aiModel,
+      enabled: aiEnabled,
+    });
+  }, [apiKey, aiModel, aiEnabled, loaded]);
 
   return (
     <div className="tool-panel" style={{ overflow: 'auto' }}>
@@ -27,6 +58,20 @@ export default function SettingsPanel() {
           />
         </div>
         <div className="settings__row">
+          <span className="settings__label">Model</span>
+          <select
+            className="settings__select"
+            value={aiModel}
+            onChange={(e) => setAiModel(e.target.value)}
+          >
+            {MODEL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="settings__row">
           <span className="settings__label">API Key</span>
           <input
             style={{
@@ -42,7 +87,9 @@ export default function SettingsPanel() {
               outline: 'none',
             }}
             type="password"
-            placeholder="sk-..."
+            placeholder="gsk_..."
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
           />
         </div>
       </div>
