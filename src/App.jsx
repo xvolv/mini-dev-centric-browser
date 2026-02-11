@@ -24,6 +24,8 @@ export default function App() {
     height: 844,
     orientation: 'portrait',
   });
+  const [tabHtml, setTabHtml] = useState({});
+  const [aiDraft, setAiDraft] = useState({ id: 0, text: '' });
   const webviewRefs = useRef({});
   const tabToWebContents = useRef(new Map());
   const webContentsToTab = useRef(new Map());
@@ -65,6 +67,14 @@ export default function App() {
     setCanGoForward(forward);
   }, []);
 
+  const handleSelectionAction = useCallback((selection) => {
+    const text = typeof selection?.text === 'string' ? selection.text.trim() : '';
+    if (!text) return;
+    setAiDraft({ id: Date.now(), text });
+    setActiveTool('ai');
+    setDevToolsOpen(true);
+  }, []);
+
   const handleNewTab = () => {
     const id = nextTabId++;
     setTabs((prev) => [...prev, { id, title: 'New Tab', url: '' }]);
@@ -90,6 +100,11 @@ export default function App() {
       return next;
     });
     setConsoleLogs((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setTabHtml((prev) => {
       const next = { ...prev };
       delete next[id];
       return next;
@@ -190,6 +205,15 @@ export default function App() {
           onUrlUpdate={handleUrlUpdate}
           onNavStateChange={handleNavStateChange}
           deviceSim={deviceSim}
+          onSelectionAction={handleSelectionAction}
+          onPageContent={(tabId, html) => {
+            const limit = 100 * 1024;
+            const trimmed = typeof html === 'string' ? html.slice(0, limit) : '';
+            setTabHtml((prev) => ({
+              ...prev,
+              [tabId]: { html: trimmed, updatedAt: Date.now() },
+            }));
+          }}
           onConsoleMessage={(tabId, entry) => {
             const levelMap = {
               0: 'log',
@@ -228,6 +252,10 @@ export default function App() {
             }}
             deviceSim={deviceSim}
             onDeviceSimChange={setDeviceSim}
+              activeTabTitle={activeTab?.title || ''}
+              activeTabHtml={tabHtml[activeTabId]?.html || ''}
+              activeTabHtmlUpdatedAt={tabHtml[activeTabId]?.updatedAt || null}
+            aiDraft={aiDraft}
           />
         )}
       </div>

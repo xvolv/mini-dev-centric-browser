@@ -511,6 +511,31 @@ html, body, #root {
   animation: loading-progress 2s ease-in-out infinite;
 }
 
+.browser-view__selection-action {
+  position: absolute;
+  z-index: 20;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  transform: translateY(0);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.browser-view__selection-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+}
+
 @keyframes loading-progress {
   0% { width: 0%; }
   50% { width: 70%; }
@@ -1174,6 +1199,45 @@ html, body, #root {
   border-bottom-left-radius: var(--radius-sm);
 }
 
+.ai-assistant__text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-assistant__para {
+  margin: 0;
+  line-height: 1.5;
+  color: inherit;
+}
+
+.ai-assistant__list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.ai-assistant__list-item {
+  margin: 2px 0;
+}
+
+.ai-assistant__code {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: rgba(12, 20, 33, 0.9);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  line-height: 1.5;
+}
+
+.ai-assistant__code code {
+  color: #c9d1d9;
+  white-space: pre;
+}
+
 .ai-assistant__input-bar {
   display: flex;
   gap: 6px;
@@ -1183,15 +1247,18 @@ html, body, #root {
 
 .ai-assistant__input {
   flex: 1;
-  height: 32px;
-  padding: 0 12px;
+  min-height: 36px;
+  max-height: 140px;
+  padding: 6px 12px;
   background: var(--bg-input);
   border: 1px solid var(--border-muted);
-  border-radius: var(--radius-round);
+  border-radius: 14px;
   color: var(--text-primary);
   font-size: var(--font-sm);
   font-family: var(--font-family);
   outline: none;
+  resize: vertical;
+  line-height: 1.4;
 }
 
 .ai-assistant__input:focus {

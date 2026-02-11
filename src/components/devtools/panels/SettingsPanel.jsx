@@ -11,6 +11,8 @@ export default function SettingsPanel() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiModel, setAiModel] = useState('llama-3.1-8b-instant');
   const [apiKey, setApiKey] = useState('');
+  const [includeActiveTabTitle, setIncludeActiveTabTitle] = useState(true);
+  const [includeActiveTabContent, setIncludeActiveTabContent] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
@@ -21,6 +23,8 @@ export default function SettingsPanel() {
         setApiKey(res.settings.apiKey || '');
         setAiModel(res.settings.model || aiModel);
         setAiEnabled(res.settings.enabled !== false);
+        setIncludeActiveTabTitle(res.settings.includeActiveTabTitle !== false);
+        setIncludeActiveTabContent(res.settings.includeActiveTabContent !== false);
       }
       setLoaded(true);
     };
@@ -33,8 +37,10 @@ export default function SettingsPanel() {
       apiKey,
       model: aiModel,
       enabled: aiEnabled,
+      includeActiveTabTitle,
+      includeActiveTabContent,
     });
-  }, [apiKey, aiModel, aiEnabled, loaded]);
+  }, [apiKey, aiModel, aiEnabled, includeActiveTabTitle, includeActiveTabContent, loaded]);
 
   return (
     <div className="tool-panel" style={{ overflow: 'auto' }}>
@@ -55,6 +61,20 @@ export default function SettingsPanel() {
           <button
             className={`settings__toggle ${aiEnabled ? 'settings__toggle--on' : ''}`}
             onClick={() => setAiEnabled(!aiEnabled)}
+          />
+        </div>
+        <div className="settings__row">
+          <span className="settings__label">Include Active Tab Title</span>
+          <button
+            className={`settings__toggle ${includeActiveTabTitle ? 'settings__toggle--on' : ''}`}
+            onClick={() => setIncludeActiveTabTitle(!includeActiveTabTitle)}
+          />
+        </div>
+        <div className="settings__row">
+          <span className="settings__label">Include Active Tab Text</span>
+          <button
+            className={`settings__toggle ${includeActiveTabContent ? 'settings__toggle--on' : ''}`}
+            onClick={() => setIncludeActiveTabContent(!includeActiveTabContent)}
           />
         </div>
         <div className="settings__row">

@@ -21,9 +21,17 @@ function readAiSettings() {
             enabled: data?.enabled !== false,
             model: data?.model || 'llama-3.1-8b-instant',
             apiKey: data?.apiKey || '',
+            includeActiveTabTitle: data?.includeActiveTabTitle !== false,
+            includeActiveTabContent: data?.includeActiveTabContent !== false,
         };
     } catch {
-        return { enabled: true, model: 'llama-3.1-8b-instant', apiKey: '' };
+        return {
+            enabled: true,
+            model: 'llama-3.1-8b-instant',
+            apiKey: '',
+            includeActiveTabTitle: true,
+            includeActiveTabContent: true,
+        };
     }
 }
 
@@ -161,6 +169,21 @@ function createWindow() {
             webviewTag: true,
         },
         icon: path.join(__dirname, 'assets', 'icon.png'),
+    });
+
+    const csp = "default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss: http: https:;";
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        const isRenderer = details.resourceType === 'mainFrame' && (
+            details.url.startsWith('http://localhost:5173') ||
+            details.url.startsWith('file://')
+        );
+        if (!isRenderer) return callback({ responseHeaders: details.responseHeaders });
+        callback({
+            responseHeaders: {
+                ...details.responseHeaders,
+                'Content-Security-Policy': [csp],
+            },
+        });
     });
 
     if (isDev) {

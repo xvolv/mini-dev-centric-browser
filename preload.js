@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const path = require('path');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     // Window controls
@@ -30,4 +31,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     aiChat: (payload) => ipcRenderer.invoke('ai:chat', payload),
     aiGetSettings: () => ipcRenderer.invoke('ai:getSettings'),
     aiSetSettings: (settings) => ipcRenderer.invoke('ai:setSettings', settings),
+    webviewPreloadPath: path.join(__dirname, 'webview-preload.js'),
 });

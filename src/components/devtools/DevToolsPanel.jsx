@@ -19,6 +19,10 @@ export default function DevToolsPanel({
   onClearNetwork,
   deviceSim,
   onDeviceSimChange,
+  activeTabTitle,
+  activeTabHtml,
+  activeTabHtmlUpdatedAt,
+  aiDraft,
 }) {
   const [panelWidth, setPanelWidth] = useState(420);
   const isResizing = useRef(false);
@@ -54,7 +58,14 @@ export default function DevToolsPanel({
       case 'device':
         return <DeviceSimPanel value={deviceSim} onChange={onDeviceSimChange} />;
       case 'ai':
-        return <AiAssistantPanel />;
+        return (
+          <AiAssistantPanel
+            activeTabTitle={activeTabTitle}
+            activeTabHtml={activeTabHtml}
+            activeTabHtmlUpdatedAt={activeTabHtmlUpdatedAt}
+            aiDraft={aiDraft}
+          />
+        );
       case 'git':
         return <GitPanel />;
       case 'workspace':
