@@ -157,7 +157,8 @@ export default function App() {
     const unsubscribe = window.electronAPI.onNetworkEvent((entry) => {
       const tabId = webContentsToTab.current.get(entry.webContentsId);
       if (!tabId) return;
-      const resourceType = typeof entry.resourceType === "string" ? entry.resourceType : "";
+      const resourceType =
+        typeof entry.resourceType === "string" ? entry.resourceType : "";
       const isApiRequest = resourceType === "xhr" || resourceType === "fetch";
       setNetworkLogs((prev) => {
         const next = { ...prev };
@@ -242,8 +243,8 @@ export default function App() {
           deviceSim={deviceSim}
           onSelectionAction={handleSelectionAction}
           onApiRequest={(tabId, payload) => {
-            const method = payload?.method ? String(payload.method) : '';
-            const url = payload?.url ? String(payload.url) : '';
+            const method = payload?.method ? String(payload.method) : "";
+            const url = payload?.url ? String(payload.url) : "";
             if (!method || !url) return;
             setLatestApiRequestByTab((prev) => ({
               ...prev,
@@ -252,8 +253,8 @@ export default function App() {
                 url,
                 headers: payload?.headers || {},
                 body: payload?.body,
-                source: payload?.source || 'webview',
-                resourceType: payload?.source || 'webview',
+                source: payload?.source || "webview",
+                resourceType: payload?.source || "webview",
                 status: null,
                 receivedAt: payload?.capturedAt || Date.now(),
               },

@@ -1,23 +1,27 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function ApiTesterPanel({ latestRequest }) {
-  const [method, setMethod] = useState('GET');
-  const [url, setUrl] = useState('https://jsonplaceholder.typicode.com/posts/1');
-  const [activeTab, setActiveTab] = useState('params');
-  const [paramsText, setParamsText] = useState('');
-  const [headersText, setHeadersText] = useState('{\n  "Accept": "application/json"\n}');
-  const [authType, setAuthType] = useState('none');
-  const [authToken, setAuthToken] = useState('');
-  const [authUser, setAuthUser] = useState('');
-  const [authPass, setAuthPass] = useState('');
-  const [bodyText, setBodyText] = useState('');
+  const [method, setMethod] = useState("GET");
+  const [url, setUrl] = useState(
+    "https://jsonplaceholder.typicode.com/posts/1",
+  );
+  const [activeTab, setActiveTab] = useState("params");
+  const [paramsText, setParamsText] = useState("");
+  const [headersText, setHeadersText] = useState(
+    '{\n  "Accept": "application/json"\n}',
+  );
+  const [authType, setAuthType] = useState("none");
+  const [authToken, setAuthToken] = useState("");
+  const [authUser, setAuthUser] = useState("");
+  const [authPass, setAuthPass] = useState("");
+  const [bodyText, setBodyText] = useState("");
   const [response, setResponse] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [autoFill, setAutoFill] = useState(true);
   const [lastAppliedAt, setLastAppliedAt] = useState(null);
   const [sendViaMain, setSendViaMain] = useState(true);
 
-  const allowsBody = useMemo(() => !['GET', 'HEAD'].includes(method), [method]);
+  const allowsBody = useMemo(() => !["GET", "HEAD"].includes(method), [method]);
 
   const applyLatest = useCallback((request) => {
     if (!request) return;
@@ -38,7 +42,8 @@ export default function ApiTesterPanel({ latestRequest }) {
 
   useEffect(() => {
     if (!autoFill || !latestRequest) return;
-    if (latestRequest.receivedAt && latestRequest.receivedAt === lastAppliedAt) return;
+    if (latestRequest.receivedAt && latestRequest.receivedAt === lastAppliedAt)
+      return;
     applyLatest(latestRequest);
   }, [autoFill, latestRequest, lastAppliedAt, applyLatest]);
 
@@ -46,15 +51,15 @@ export default function ApiTesterPanel({ latestRequest }) {
     if (!headersText.trim()) return {};
     try {
       const parsed = JSON.parse(headersText);
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
     } catch {
-      throw new Error('Headers must be valid JSON.');
+      throw new Error("Headers must be valid JSON.");
     }
   };
 
   const buildUrl = () => {
     if (!paramsText.trim()) return url;
-    const sep = url.includes('?') ? '&' : '?';
+    const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}${paramsText.trim()}`;
   };
   const handleSend = async () => {
@@ -64,10 +69,10 @@ export default function ApiTesterPanel({ latestRequest }) {
 
     try {
       const headers = parseHeaders();
-      if (authType === 'bearer' && authToken.trim()) {
+      if (authType === "bearer" && authToken.trim()) {
         headers.Authorization = `Bearer ${authToken.trim()}`;
       }
-      if (authType === 'basic' && (authUser || authPass)) {
+      if (authType === "basic" && (authUser || authPass)) {
         const token = btoa(`${authUser}:${authPass}`);
         headers.Authorization = `Basic ${token}`;
       }
@@ -76,10 +81,10 @@ export default function ApiTesterPanel({ latestRequest }) {
       const options = { method, headers: { ...headers } };
       if (allowsBody && bodyText.trim()) {
         options.body = bodyText;
-        if (!options.headers['Content-Type']) {
+        if (!options.headers["Content-Type"]) {
           const trimmed = bodyText.trim();
-          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-            options.headers['Content-Type'] = 'application/json';
+          if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            options.headers["Content-Type"] = "application/json";
           }
         }
       }
@@ -90,13 +95,17 @@ export default function ApiTesterPanel({ latestRequest }) {
           headers: options.headers,
           body: options.body,
         });
-        if (!res?.ok) throw new Error(res?.error || 'Request failed');
-        const elapsedMs = res.timeMs ?? Math.round(performance.now() - startedAt);
-        const text = res.body || '';
+        if (!res?.ok) throw new Error(res?.error || "Request failed");
+        const elapsedMs =
+          res.timeMs ?? Math.round(performance.now() - startedAt);
+        const text = res.body || "";
         const headerPairs = Array.isArray(res.headers) ? res.headers : [];
-        const contentType = headerPairs.find(([key]) => String(key).toLowerCase() === 'content-type')?.[1] || '';
+        const contentType =
+          headerPairs.find(
+            ([key]) => String(key).toLowerCase() === "content-type",
+          )?.[1] || "";
         let displayBody = text;
-        if (contentType.includes('application/json')) {
+        if (contentType.includes("application/json")) {
           try {
             displayBody = JSON.stringify(JSON.parse(text), null, 2);
           } catch {
@@ -116,10 +125,10 @@ export default function ApiTesterPanel({ latestRequest }) {
         const res = await fetch(finalUrl, options);
         const text = await res.text();
         const elapsedMs = Math.round(performance.now() - startedAt);
-        const contentType = res.headers.get('content-type') || '';
+        const contentType = res.headers.get("content-type") || "";
         let displayBody = text;
 
-        if (contentType.includes('application/json')) {
+        if (contentType.includes("application/json")) {
           try {
             displayBody = JSON.stringify(JSON.parse(text), null, 2);
           } catch {
@@ -140,12 +149,12 @@ export default function ApiTesterPanel({ latestRequest }) {
     } catch (error) {
       setResponse({
         ok: false,
-        status: 'Error',
-        statusText: error.message || 'Request failed',
+        status: "Error",
+        statusText: error.message || "Request failed",
         timeMs: Math.round(performance.now() - startedAt),
         size: 0,
         headers: [],
-        body: '',
+        body: "",
       });
     } finally {
       setIsSending(false);
@@ -155,12 +164,18 @@ export default function ApiTesterPanel({ latestRequest }) {
   return (
     <div className="tool-panel">
       <div className="api-tester__url-bar">
-        <select className="api-tester__method-select" value={method} onChange={(e) => setMethod(e.target.value)}>
-          {['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'].map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
+        <select
+          className="api-tester__method-select"
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+        >
+          {["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"].map(
+            (m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ),
+          )}
         </select>
         <input
           className="api-tester__url-input"
@@ -169,8 +184,12 @@ export default function ApiTesterPanel({ latestRequest }) {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="Enter request URL..."
         />
-        <button className="api-tester__send-btn" onClick={handleSend} disabled={isSending}>
-          {isSending ? 'Sending...' : 'Send'}
+        <button
+          className="api-tester__send-btn"
+          onClick={handleSend}
+          disabled={isSending}
+        >
+          {isSending ? "Sending..." : "Send"}
         </button>
       </div>
       <div className="api-tester__autofill">
@@ -191,7 +210,9 @@ export default function ApiTesterPanel({ latestRequest }) {
           Use last request
         </button>
         <div className="api-tester__autofill-meta">
-          {latestRequest ? `${latestRequest.method} ${latestRequest.url}` : 'No request captured yet'}
+          {latestRequest
+            ? `${latestRequest.method} ${latestRequest.url}`
+            : "No request captured yet"}
         </div>
       </div>
       <div className="api-tester__send-mode">
@@ -205,10 +226,10 @@ export default function ApiTesterPanel({ latestRequest }) {
         </label>
       </div>
       <div className="api-tester__tabs">
-        {['params', 'headers', 'auth', 'body'].map((tab) => (
+        {["params", "headers", "auth", "body"].map((tab) => (
           <button
             key={tab}
-            className={`api-tester__tab ${activeTab === tab ? 'api-tester__tab--active' : ''}`}
+            className={`api-tester__tab ${activeTab === tab ? "api-tester__tab--active" : ""}`}
             onClick={() => setActiveTab(tab)}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -216,7 +237,7 @@ export default function ApiTesterPanel({ latestRequest }) {
         ))}
       </div>
       <div className="api-tester__editor">
-        {activeTab === 'params' && (
+        {activeTab === "params" && (
           <div className="api-tester__section">
             <div className="api-tester__section-title">Query Params</div>
             <textarea
@@ -228,7 +249,7 @@ export default function ApiTesterPanel({ latestRequest }) {
             />
           </div>
         )}
-        {activeTab === 'headers' && (
+        {activeTab === "headers" && (
           <div className="api-tester__section">
             <div className="api-tester__section-title">Headers (JSON)</div>
             <textarea
@@ -239,16 +260,20 @@ export default function ApiTesterPanel({ latestRequest }) {
             />
           </div>
         )}
-        {activeTab === 'auth' && (
+        {activeTab === "auth" && (
           <div className="api-tester__section">
             <div className="api-tester__section-title">Authorization</div>
             <div className="api-tester__auth-row">
-              <select className="api-tester__auth-select" value={authType} onChange={(e) => setAuthType(e.target.value)}>
+              <select
+                className="api-tester__auth-select"
+                value={authType}
+                onChange={(e) => setAuthType(e.target.value)}
+              >
                 <option value="none">None</option>
                 <option value="bearer">Bearer Token</option>
                 <option value="basic">Basic</option>
               </select>
-              {authType === 'bearer' && (
+              {authType === "bearer" && (
                 <input
                   className="api-tester__auth-input"
                   type="password"
@@ -257,7 +282,7 @@ export default function ApiTesterPanel({ latestRequest }) {
                   onChange={(e) => setAuthToken(e.target.value)}
                 />
               )}
-              {authType === 'basic' && (
+              {authType === "basic" && (
                 <>
                   <input
                     className="api-tester__auth-input"
@@ -278,9 +303,11 @@ export default function ApiTesterPanel({ latestRequest }) {
             </div>
           </div>
         )}
-        {activeTab === 'body' && (
+        {activeTab === "body" && (
           <div className="api-tester__section">
-            <div className="api-tester__section-title">Body {allowsBody ? '' : '(not supported for this method)'}</div>
+            <div className="api-tester__section-title">
+              Body {allowsBody ? "" : "(not supported for this method)"}
+            </div>
             <textarea
               className="api-tester__textarea"
               rows={8}
@@ -296,22 +323,29 @@ export default function ApiTesterPanel({ latestRequest }) {
         <div className="api-tester__response-header">
           <span className="tool-panel__title">Response</span>
           {response ? (
-            <span className={`tool-panel__badge ${response.ok ? 'tool-panel__badge--success' : 'tool-panel__badge--warn'}`}>
+            <span
+              className={`tool-panel__badge ${response.ok ? "tool-panel__badge--success" : "tool-panel__badge--warn"}`}
+            >
               {response.status} {response.statusText}
             </span>
           ) : (
-            <span className="tool-panel__badge tool-panel__badge--info">Ready</span>
+            <span className="tool-panel__badge tool-panel__badge--info">
+              Ready
+            </span>
           )}
         </div>
         <div className="api-tester__response-body">
-          {!response && 'Click "Send" to execute the request and view the response here.'}
+          {!response &&
+            'Click "Send" to execute the request and view the response here.'}
           {response && (
             <div className="api-tester__response-content">
               <div className="api-tester__response-meta">
                 <span>Time: {response.timeMs} ms</span>
                 <span>Size: {response.size} B</span>
               </div>
-              <pre className="api-tester__response-text">{response.body || '(empty response)'}</pre>
+              <pre className="api-tester__response-text">
+                {response.body || "(empty response)"}
+              </pre>
             </div>
           )}
         </div>

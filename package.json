@@ -18,7 +18,29 @@
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
     "electron": "^33.3.1",
+    "electron-builder": "^24.13.3",
     "vite": "^6.1.0",
     "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.minidevcentric.browser",
+    "productName": "Mini Dev-Centric Browser",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "main.js",
+      "preload.js",
+      "webview-preload.js",
+      "assets/**",
+      "package.json"
+    ],
+    "extraResources": [
+      "app-config.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
   }
 }

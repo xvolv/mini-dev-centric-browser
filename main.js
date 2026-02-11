@@ -11,6 +11,20 @@ const trackedWebContents = new Set();
 const requestStartTimes = new Map();
 let webRequestAttached = false;
 let githubToken = null;
+const APP_CONFIG_FILE = () => {
+    if (app.isPackaged) {
+        return path.join(process.resourcesPath, 'app-config.json');
+    }
+    return path.join(__dirname, 'app-config.json');
+};
+const readAppConfig = () => {
+    try {
+        const raw = fs.readFileSync(APP_CONFIG_FILE(), 'utf-8');
+        return JSON.parse(raw) || {};
+    } catch {
+        return {};
+    }
+};
 const AI_SETTINGS_FILE = () => path.join(app.getPath('userData'), 'ai_settings.json');
 
 function readAiSettings() {
@@ -248,7 +262,7 @@ function createWindow() {
     });
 
     ipcMain.handle('github:deviceCode', async () => {
-        const clientId = process.env.GITHUB_CLIENT_ID;
+        const clientId = process.env.GITHUB_CLIENT_ID || readAppConfig().githubClientId;
         if (!clientId) {
             return { ok: false, error: 'GITHUB_CLIENT_ID is not configured.' };
         }
@@ -273,7 +287,7 @@ function createWindow() {
     });
 
     ipcMain.handle('github:poll', async (_event, deviceCode) => {
-        const clientId = process.env.GITHUB_CLIENT_ID;
+        const clientId = process.env.GITHUB_CLIENT_ID || readAppConfig().githubClientId;
         if (!clientId) {
             return { ok: false, error: 'GITHUB_CLIENT_ID is not configured.' };
         }
