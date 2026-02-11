@@ -65,4 +65,3 @@ Update `app-config.json` to customize the app behavior. If you use environment v
 
 ## License
 
-Add your license here.
