@@ -31,5 +31,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     aiChat: (payload) => ipcRenderer.invoke('ai:chat', payload),
     aiGetSettings: () => ipcRenderer.invoke('ai:getSettings'),
     aiSetSettings: (settings) => ipcRenderer.invoke('ai:setSettings', settings),
+    apiSend: (payload) => ipcRenderer.invoke('api:send', payload),
     webviewPreloadPath: path.join(__dirname, 'webview-preload.js'),
 });

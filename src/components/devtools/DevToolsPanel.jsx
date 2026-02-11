@@ -1,14 +1,14 @@
-import React, { useRef, useState } from 'react';
-import { TOOLS } from '../../data/tools';
-import ConsolePanel from './panels/ConsolePanel';
-import NetworkPanel from './panels/NetworkPanel';
-import ApiTesterPanel from './panels/ApiTesterPanel';
-import SandboxPanel from './panels/SandboxPanel';
-import DeviceSimPanel from './panels/DeviceSimPanel';
-import AiAssistantPanel from './panels/AiAssistantPanel';
-import GitPanel from './panels/GitPanel';
-import WorkspacePanel from './panels/WorkspacePanel';
-import SettingsPanel from './panels/SettingsPanel';
+import React, { useRef, useState } from "react";
+import { TOOLS } from "../../data/tools";
+import ConsolePanel from "./panels/ConsolePanel";
+import NetworkPanel from "./panels/NetworkPanel";
+import ApiTesterPanel from "./panels/ApiTesterPanel";
+import SandboxPanel from "./panels/SandboxPanel";
+import DeviceSimPanel from "./panels/DeviceSimPanel";
+import AiAssistantPanel from "./panels/AiAssistantPanel";
+import GitPanel from "./panels/GitPanel";
+import WorkspacePanel from "./panels/WorkspacePanel";
+import SettingsPanel from "./panels/SettingsPanel";
 
 export default function DevToolsPanel({
   activeTool,
@@ -23,14 +23,15 @@ export default function DevToolsPanel({
   activeTabHtml,
   activeTabHtmlUpdatedAt,
   aiDraft,
+  latestApiRequest,
 }) {
   const [panelWidth, setPanelWidth] = useState(420);
   const isResizing = useRef(false);
 
   const handleMouseDown = () => {
     isResizing.current = true;
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   const handleMouseMove = (e) => {
@@ -41,23 +42,29 @@ export default function DevToolsPanel({
 
   const handleMouseUp = () => {
     isResizing.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
   };
 
   const renderContent = () => {
     switch (activeTool) {
-      case 'console':
-        return <ConsolePanel entries={consoleEntries} onClear={onClearConsole} />;
-      case 'network':
-        return <NetworkPanel entries={networkEntries} onClear={onClearNetwork} />;
-      case 'api':
-        return <ApiTesterPanel />;
-      case 'sandbox':
+      case "console":
+        return (
+          <ConsolePanel entries={consoleEntries} onClear={onClearConsole} />
+        );
+      case "network":
+        return (
+          <NetworkPanel entries={networkEntries} onClear={onClearNetwork} />
+        );
+      case "api":
+        return <ApiTesterPanel latestRequest={latestApiRequest} />;
+      case "sandbox":
         return <SandboxPanel />;
-      case 'device':
-        return <DeviceSimPanel value={deviceSim} onChange={onDeviceSimChange} />;
-      case 'ai':
+      case "device":
+        return (
+          <DeviceSimPanel value={deviceSim} onChange={onDeviceSimChange} />
+        );
+      case "ai":
         return (
           <AiAssistantPanel
             activeTabTitle={activeTabTitle}
@@ -66,11 +73,11 @@ export default function DevToolsPanel({
             aiDraft={aiDraft}
           />
         );
-      case 'git':
+      case "git":
         return <GitPanel />;
-      case 'workspace':
+      case "workspace":
         return <WorkspacePanel />;
-      case 'settings':
+      case "settings":
         return <SettingsPanel />;
       default:
         return <ConsolePanel />;
@@ -84,7 +91,7 @@ export default function DevToolsPanel({
         {TOOLS.map((tool) => (
           <button
             key={tool.id}
-            className={`devtools-tab ${activeTool === tool.id ? 'devtools-tab--active' : ''}`}
+            className={`devtools-tab ${activeTool === tool.id ? "devtools-tab--active" : ""}`}
             onClick={() => onToolChange(tool.id)}
             title={tool.label}
           >

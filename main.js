@@ -210,6 +210,37 @@ function createWindow() {
         ensureWebRequestHandlers();
     });
 
+    ipcMain.handle('api:send', async (_event, payload) => {
+        try {
+            const url = payload?.url ? String(payload.url) : '';
+            const method = payload?.method ? String(payload.method) : 'GET';
+            if (!url) throw new Error('Request URL is required.');
+
+            const headers = payload?.headers && typeof payload.headers === 'object' ? payload.headers : {};
+            const body = payload?.body;
+            const options = { method, headers: { ...headers } };
+            if (body !== undefined && body !== null && !['GET', 'HEAD'].includes(method.toUpperCase())) {
+                options.body = body;
+            }
+
+            const startedAt = Date.now();
+            const res = await session.defaultSession.fetch(url, options);
+            const text = await res.text();
+            const elapsedMs = Math.max(0, Date.now() - startedAt);
+            return {
+                ok: res.ok,
+                status: res.status,
+                statusText: res.statusText,
+                timeMs: elapsedMs,
+                size: text.length,
+                headers: Array.from(res.headers.entries()),
+                body: text,
+            };
+        } catch (error) {
+            return { ok: false, error: error?.message || String(error) };
+        }
+    });
+
     ipcMain.handle('shell:openExternal', async (_event, url) => {
         if (!url || typeof url !== 'string') return { ok: false, error: 'Invalid URL.' };
         await shell.openExternal(url);

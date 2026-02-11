@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export default function BrowserView({
   tabs,
@@ -10,6 +10,7 @@ export default function BrowserView({
   onNavStateChange,
   onWebviewReady,
   onConsoleMessage,
+  onApiRequest,
   deviceSim,
   onPageContent,
   onSelectionAction,
@@ -25,8 +26,10 @@ export default function BrowserView({
 
   const viewport = useMemo(() => {
     if (!deviceSim?.enabled) return null;
-    const width = deviceSim.orientation === 'portrait' ? deviceSim.width : deviceSim.height;
-    const height = deviceSim.orientation === 'portrait' ? deviceSim.height : deviceSim.width;
+    const width =
+      deviceSim.orientation === "portrait" ? deviceSim.width : deviceSim.height;
+    const height =
+      deviceSim.orientation === "portrait" ? deviceSim.height : deviceSim.width;
     return { width, height };
   }, [deviceSim]);
 
@@ -93,7 +96,8 @@ export default function BrowserView({
         webview
           .executeJavaScript('document.body ? document.body.innerText : ""')
           .then((html) => {
-            const safeHtml = typeof html === 'string' ? html : String(html ?? '');
+            const safeHtml =
+              typeof html === "string" ? html : String(html ?? "");
             onPageContent(activeTabId, safeHtml);
           })
           .catch(() => {});
@@ -139,35 +143,46 @@ export default function BrowserView({
     };
     const handleFinish = () => scheduleCapture(0);
 
-    webview.addEventListener('did-start-loading', handleStart);
-    webview.addEventListener('did-stop-loading', handleStop);
-    webview.addEventListener('dom-ready', handleDomReady);
-    webview.addEventListener('did-finish-load', handleFinish);
-    webview.addEventListener('page-title-updated', handleTitle);
-    webview.addEventListener('did-navigate', handleNavigate);
-    webview.addEventListener('did-navigate-in-page', handleNavigate);
+    webview.addEventListener("did-start-loading", handleStart);
+    webview.addEventListener("did-stop-loading", handleStop);
+    webview.addEventListener("dom-ready", handleDomReady);
+    webview.addEventListener("did-finish-load", handleFinish);
+    webview.addEventListener("page-title-updated", handleTitle);
+    webview.addEventListener("did-navigate", handleNavigate);
+    webview.addEventListener("did-navigate-in-page", handleNavigate);
 
     updateNavState();
 
     return () => {
-      webview.removeEventListener('did-start-loading', handleStart);
-      webview.removeEventListener('did-stop-loading', handleStop);
-      webview.removeEventListener('dom-ready', handleDomReady);
-      webview.removeEventListener('did-finish-load', handleFinish);
-      webview.removeEventListener('page-title-updated', handleTitle);
-      webview.removeEventListener('did-navigate', handleNavigate);
-      webview.removeEventListener('did-navigate-in-page', handleNavigate);
+      webview.removeEventListener("did-start-loading", handleStart);
+      webview.removeEventListener("did-stop-loading", handleStop);
+      webview.removeEventListener("dom-ready", handleDomReady);
+      webview.removeEventListener("did-finish-load", handleFinish);
+      webview.removeEventListener("page-title-updated", handleTitle);
+      webview.removeEventListener("did-navigate", handleNavigate);
+      webview.removeEventListener("did-navigate-in-page", handleNavigate);
       timeouts.forEach((id) => clearTimeout(id));
     };
-  }, [activeTabId, onLoadingChange, onNavStateChange, onTitleUpdate, onUrlUpdate, onPageContent]);
+  }, [
+    activeTabId,
+    onLoadingChange,
+    onNavStateChange,
+    onTitleUpdate,
+    onUrlUpdate,
+    onPageContent,
+  ]);
 
   if (!hasActiveUrl) {
     return (
       <div className="browser-view">
         <div className="browser-view__empty">
           <div className="browser-view__empty-logo">D</div>
-          <div className="browser-view__empty-title">Mini Dev-Centric Browser</div>
-          <div className="browser-view__empty-subtitle">Enter a URL above or open a new tab to start browsing</div>
+          <div className="browser-view__empty-title">
+            Mini Dev-Centric Browser
+          </div>
+          <div className="browser-view__empty-subtitle">
+            Enter a URL above or open a new tab to start browsing
+          </div>
         </div>
       </div>
     );
@@ -184,23 +199,30 @@ export default function BrowserView({
         <div className="browser-view__device-stage">
           <div
             className="browser-view__device-outer"
-            style={{ width: viewport.width * scale, height: viewport.height * scale }}
+            style={{
+              width: viewport.width * scale,
+              height: viewport.height * scale,
+            }}
           >
             <div
               className="browser-view__device-frame"
-              style={{ width: viewport.width, height: viewport.height, transform: `scale(${scale})` }}
+              style={{
+                width: viewport.width,
+                height: viewport.height,
+                transform: `scale(${scale})`,
+              }}
             >
               <webview
                 key={activeTab.id}
                 src={activeTab.url}
                 preload={webviewPreload}
-                style={{ width: '100%', height: '100%' }}
+                style={{ width: "100%", height: "100%" }}
                 ref={(el) => {
                   if (!el) return;
                   webviewRefs.current[activeTab.id] = el;
                   if (!el.__devcentricConsoleAttached) {
                     el.__devcentricConsoleAttached = true;
-                    el.addEventListener('console-message', (event) => {
+                    el.addEventListener("console-message", (event) => {
                       onConsoleMessage?.(activeTab.id, {
                         level: event.level,
                         message: event.message,
@@ -211,25 +233,34 @@ export default function BrowserView({
                   }
                   if (!el.__devcentricSelectionAttached) {
                     el.__devcentricSelectionAttached = true;
-                    el.addEventListener('ipc-message', (event) => {
-                      if (event.channel !== 'selection-change') return;
-                      const payload = event.args?.[0] || {};
-                      const text = typeof payload.text === 'string' ? payload.text.trim() : '';
-                      if (!text) {
-                        setSelectionInfo(null);
+                    el.addEventListener("ipc-message", (event) => {
+                      if (event.channel === "selection-change") {
+                        const payload = event.args?.[0] || {};
+                        const text =
+                          typeof payload.text === "string"
+                            ? payload.text.trim()
+                            : "";
+                        if (!text) {
+                          setSelectionInfo(null);
+                          return;
+                        }
+                        setSelectionInfo({
+                          text,
+                          rect: payload.rect || {},
+                        });
                         return;
                       }
-                      setSelectionInfo({
-                        text,
-                        rect: payload.rect || {},
-                      });
+                      if (event.channel === "api-request") {
+                        const payload = event.args?.[0] || {};
+                        onApiRequest?.(activeTabId, payload);
+                      }
                     });
                   }
                   if (!el.__devcentricReady) {
                     el.__devcentricReady = true;
-                    el.addEventListener('dom-ready', () => {
+                    el.addEventListener("dom-ready", () => {
                       const webContentsId = el.getWebContentsId?.();
-                      if (typeof webContentsId === 'number') {
+                      if (typeof webContentsId === "number") {
                         onWebviewReady?.(activeTab.id, webContentsId, el);
                       }
                     });
@@ -244,13 +275,13 @@ export default function BrowserView({
           key={activeTab.id}
           src={activeTab.url}
           preload={webviewPreload}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: "100%", height: "100%" }}
           ref={(el) => {
             if (!el) return;
             webviewRefs.current[activeTab.id] = el;
             if (!el.__devcentricConsoleAttached) {
               el.__devcentricConsoleAttached = true;
-              el.addEventListener('console-message', (event) => {
+              el.addEventListener("console-message", (event) => {
                 onConsoleMessage?.(activeTab.id, {
                   level: event.level,
                   message: event.message,
@@ -261,10 +292,11 @@ export default function BrowserView({
             }
             if (!el.__devcentricSelectionAttached) {
               el.__devcentricSelectionAttached = true;
-              el.addEventListener('ipc-message', (event) => {
-                if (event.channel !== 'selection-change') return;
+              el.addEventListener("ipc-message", (event) => {
+                if (event.channel !== "selection-change") return;
                 const payload = event.args?.[0] || {};
-                const text = typeof payload.text === 'string' ? payload.text.trim() : '';
+                const text =
+                  typeof payload.text === "string" ? payload.text.trim() : "";
                 if (!text) {
                   setSelectionInfo(null);
                   return;
@@ -277,9 +309,9 @@ export default function BrowserView({
             }
             if (!el.__devcentricReady) {
               el.__devcentricReady = true;
-              el.addEventListener('dom-ready', () => {
+              el.addEventListener("dom-ready", () => {
                 const webContentsId = el.getWebContentsId?.();
-                if (typeof webContentsId === 'number') {
+                if (typeof webContentsId === "number") {
                   onWebviewReady?.(activeTab.id, webContentsId, el);
                 }
               });

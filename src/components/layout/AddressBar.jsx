@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
 export default function AddressBar({
   url,
@@ -23,26 +23,49 @@ export default function AddressBar({
     e.preventDefault();
     let target = inputValue.trim();
     if (target && !target.match(/^[a-zA-Z]+:\/\//)) {
-      if (target.includes('.') && !target.includes(' ')) {
-        target = 'https://' + target;
+      if (target.includes(".") && !target.includes(" ")) {
+        target = "https://" + target;
       } else {
-        target = 'https://www.google.com/search?q=' + encodeURIComponent(target);
+        target =
+          "https://www.google.com/search?q=" + encodeURIComponent(target);
       }
     }
     onNavigate(target);
     inputRef.current?.blur();
   };
 
-  const isSecure = url.startsWith('https://');
+  const isSecure = url.startsWith("https://");
 
   return (
     <div className="addressbar">
-      <button className="addressbar__btn" onClick={onBack} disabled={!canGoBack} title="Back (Alt+←)">←</button>
-      <button className="addressbar__btn" onClick={onForward} disabled={!canGoForward} title="Forward (Alt+→)">→</button>
-      <button className="addressbar__btn" onClick={onReload} title="Reload (Ctrl+R)">{isLoading ? '✕' : '↻'}</button>
+      <button
+        className="addressbar__btn"
+        onClick={onBack}
+        disabled={!canGoBack}
+        title="Back (Alt+←)"
+      >
+        ←
+      </button>
+      <button
+        className="addressbar__btn"
+        onClick={onForward}
+        disabled={!canGoForward}
+        title="Forward (Alt+→)"
+      >
+        →
+      </button>
+      <button
+        className="addressbar__btn"
+        onClick={onReload}
+        title="Reload (Ctrl+R)"
+      >
+        {isLoading ? "✕" : "↻"}
+      </button>
       <form onSubmit={handleSubmit} className="addressbar__input-wrapper">
-        <span className={`addressbar__lock ${isSecure ? 'addressbar__lock--secure' : ''}`}>
-          {isSecure ? '🔒' : '🔓'}
+        <span
+          className={`addressbar__lock ${isSecure ? "addressbar__lock--secure" : ""}`}
+        >
+          {isSecure ? "🔒" : "🔓"}
         </span>
         <input
           ref={inputRef}
@@ -56,11 +79,11 @@ export default function AddressBar({
         />
       </form>
       <button
-        className={`addressbar__devtools-toggle ${devToolsOpen ? 'addressbar__devtools-toggle--active' : ''}`}
+        className={`addressbar__devtools-toggle ${devToolsOpen ? "addressbar__devtools-toggle--active" : ""}`}
         onClick={onToggleDevTools}
         title="Toggle DevTools (F12)"
       >
-        {devToolsOpen ? '✦ DevTools' : '✦ DevTools'}
+        {devToolsOpen ? "✦ DevTools" : "✦ DevTools"}
       </button>
     </div>
   );
