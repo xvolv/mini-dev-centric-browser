@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import logo from "../../public/mini-dec-centric-logo.png";
 
 export default function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -15,8 +16,11 @@ export default function TitleBar() {
   return (
     <div className="titlebar">
       <div className="titlebar__logo">
-        <div className="titlebar__logo-icon">D</div>
-        <span className="titlebar__logo-text">Mini Dev-Centric</span>
+        <img
+          className="titlebar__logo-icon"
+          src={logo}
+          alt="Mini Dev-Centric"
+        />
       </div>
       <div className="titlebar__spacer" />
       <div className="titlebar__controls">

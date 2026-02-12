@@ -11,6 +11,17 @@ const trackedWebContents = new Set();
 const requestStartTimes = new Map();
 let webRequestAttached = false;
 let githubToken = null;
+const resolveAppIcon = () => {
+    if (app.isPackaged) {
+        const packagedIcon = path.join(process.resourcesPath, 'favicon.ico');
+        if (fs.existsSync(packagedIcon)) return packagedIcon;
+    }
+    const devPng = path.join(__dirname, 'src', 'public', 'mini-dec-centric-logo.png');
+    if (fs.existsSync(devPng)) return devPng;
+    const devIco = path.join(__dirname, 'src', 'favicon_io', 'favicon.ico');
+    if (fs.existsSync(devIco)) return devIco;
+    return undefined;
+};
 const APP_CONFIG_FILE = () => {
     if (app.isPackaged) {
         return path.join(process.resourcesPath, 'app-config.json');
@@ -182,7 +193,7 @@ function createWindow() {
             sandbox: false,
             webviewTag: true,
         },
-        icon: path.join(__dirname, 'assets', 'icon.png'),
+        icon: resolveAppIcon(),
     });
 
     const csp = "default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss: http: https:;";

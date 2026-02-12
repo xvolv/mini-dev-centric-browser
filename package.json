@@ -37,10 +37,12 @@
       "package.json"
     ],
     "extraResources": [
-      "app-config.json"
+      "app-config.json",
+      "src/favicon_io/favicon.ico"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "src/favicon_io/favicon.ico"
     }
   }
 }

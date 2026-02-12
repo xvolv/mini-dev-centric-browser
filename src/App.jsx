@@ -10,7 +10,7 @@ let nextTabId = 2;
 export default function App() {
   const [tabs, setTabs] = useState([{ id: 1, title: "New Tab", url: "" }]);
   const [activeTabId, setActiveTabId] = useState(1);
-  const [devToolsOpen, setDevToolsOpen] = useState(true);
+  const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [activeTool, setActiveTool] = useState("console");
   const [isLoading, setIsLoading] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -88,7 +88,6 @@ export default function App() {
     if (!text) return;
     setAiDraft({ id: Date.now(), text });
     setActiveTool("ai");
-    setDevToolsOpen(true);
   }, []);
 
   const handleNewTab = () => {

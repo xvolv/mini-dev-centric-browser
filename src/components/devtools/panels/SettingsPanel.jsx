@@ -7,7 +7,7 @@ const MODEL_OPTIONS = [
 ];
 
 export default function SettingsPanel() {
-  const [darkMode, setDarkMode] = useState(true);
+  const [theme, setTheme] = useState("dark");
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiModel, setAiModel] = useState("llama-3.1-8b-instant");
   const [apiKey, setApiKey] = useState("");
@@ -15,6 +15,18 @@ export default function SettingsPanel() {
   const [includeActiveTabContent, setIncludeActiveTabContent] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("mini-theme");
+    if (stored === "light" || stored === "dark") {
+      setTheme(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("mini-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const load = async () => {
@@ -58,8 +70,10 @@ export default function SettingsPanel() {
         <div className="settings__row">
           <span className="settings__label">Dark Mode</span>
           <button
-            className={`settings__toggle ${darkMode ? "settings__toggle--on" : ""}`}
-            onClick={() => setDarkMode(!darkMode)}
+            className={`settings__toggle ${theme === "dark" ? "settings__toggle--on" : ""}`}
+            onClick={() =>
+              setTheme((prev) => (prev === "dark" ? "light" : "dark"))
+            }
           />
         </div>
       </div>

@@ -79,6 +79,42 @@
   --radius-round: 9999px;
 }
 
+html[data-theme="light"] {
+  --bg-primary: #f6f8fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f3f6;
+  --bg-canvas: #ffffff;
+  --bg-hover: #e9eef3;
+  --bg-active: #dde5ee;
+  --bg-input: #ffffff;
+
+  --border-default: #d0d7de;
+  --border-muted: #e6ebf1;
+  --border-accent: #0969da;
+
+  --text-primary: #1f2328;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-link: #0969da;
+
+  --accent-blue: #0969da;
+  --accent-green: #1a7f37;
+  --accent-red: #cf222e;
+  --accent-yellow: #9a6700;
+  --accent-orange: #bc4c00;
+  --accent-purple: #8250df;
+  --accent-cyan: #0596a6;
+  --accent-pink: #bf3989;
+
+  --gradient-accent: linear-gradient(135deg, #0969da 0%, #2f81f7 100%);
+  --gradient-header: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.16);
+  --shadow-glow: 0 0 16px rgba(9, 105, 218, 0.16);
+}
+
 html,
 body,
 #root {
@@ -145,16 +181,10 @@ body,
 }
 
 .titlebar__logo-icon {
-  width: 18px;
-  height: 18px;
-  background: var(--gradient-accent);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
+  width: 32px;
+  height: 32px;
+  display: block;
+  object-fit: contain;
 }
 
 .titlebar__logo-text {
@@ -478,28 +508,11 @@ body,
 }
 
 .browser-view__empty-logo {
-  width: 80px;
-  height: 80px;
-  background: var(--gradient-accent);
-  border-radius: var(--radius-xl);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 700;
-  color: #fff;
-  box-shadow: var(--shadow-glow);
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: var(--shadow-glow);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(88, 166, 255, 0.25);
-  }
+  width: 128px;
+  height: 128px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.25));
 }
 
 .browser-view__empty-title {

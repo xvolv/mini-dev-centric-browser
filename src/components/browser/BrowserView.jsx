@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import logo from "../../public/mini-dec-centric-logo.png";
 
 export default function BrowserView({
   tabs,
@@ -176,7 +177,11 @@ export default function BrowserView({
     return (
       <div className="browser-view">
         <div className="browser-view__empty">
-          <div className="browser-view__empty-logo">D</div>
+          <img
+            className="browser-view__empty-logo"
+            src={logo}
+            alt="Mini Dev-Centric"
+          />
           <div className="browser-view__empty-title">
             Mini Dev-Centric Browser
           </div>
