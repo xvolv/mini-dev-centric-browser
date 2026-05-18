@@ -1,5 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { TOOLS } from "../../data/tools";
+import { MoreHorizontal } from "lucide-react";
 import ConsolePanel from "./panels/ConsolePanel";
 import NetworkPanel from "./panels/NetworkPanel";
 import ApiTesterPanel from "./panels/ApiTesterPanel";
@@ -24,9 +25,24 @@ export default function DevToolsPanel({
   activeTabHtmlUpdatedAt,
   aiDraft,
   latestApiRequest,
+  activeTabId,
+  activeTabUrl,
+  onDevToolsWebviewReady,
+  onDevToolsConsoleMessage,
+  onDevToolsApiRequest,
 }) {
   const [panelWidth, setPanelWidth] = useState(420);
+  const [visibleToolIds, setVisibleToolIds] = useState(TOOLS.map((tool) => tool.id));
+  const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const isResizing = useRef(false);
+  const tabsBarRef = useRef(null);
+  const moreButtonRef = useRef(null);
+  const tabButtonRefs = useRef({});
+  const overflowMenuRef = useRef(null);
+
+  const overflowTools = TOOLS.filter(
+    (tool) => !visibleToolIds.includes(tool.id),
+  );
 
   const handleMouseDown = () => {
     isResizing.current = true;
@@ -46,6 +62,80 @@ export default function DevToolsPanel({
     document.removeEventListener("mouseup", handleMouseUp);
   };
 
+  const measureVisibleTools = () => {
+    const container = tabsBarRef.current;
+    if (!container) return;
+
+    const availableWidth = container.clientWidth;
+    const estimatedMoreButtonWidth = 44;
+    const maxTabsWidth = Math.max(0, availableWidth - estimatedMoreButtonWidth);
+
+    const widths = TOOLS.reduce((acc, tool) => {
+      acc[tool.id] = tabButtonRefs.current[tool.id]?.offsetWidth || 96;
+      return acc;
+    }, {});
+
+    const nextVisible = [];
+    let usedWidth = 0;
+
+    for (const tool of TOOLS) {
+      const width = widths[tool.id] || 96;
+      if (usedWidth + width <= maxTabsWidth) {
+        nextVisible.push(tool.id);
+        usedWidth += width;
+      } else {
+        break;
+      }
+    }
+
+    if (!nextVisible.includes(activeTool)) {
+      const activeWidth = widths[activeTool] || 96;
+      while (nextVisible.length && usedWidth + activeWidth > maxTabsWidth) {
+        const removedId = nextVisible.pop();
+        usedWidth -= widths[removedId] || 96;
+      }
+      if (usedWidth + activeWidth <= maxTabsWidth) {
+        nextVisible.push(activeTool);
+      }
+    }
+
+    nextVisible.sort(
+      (leftId, rightId) => TOOLS.findIndex((tool) => tool.id === leftId) - TOOLS.findIndex((tool) => tool.id === rightId),
+    );
+
+    setVisibleToolIds(nextVisible);
+  };
+
+  useEffect(() => {
+    measureVisibleTools();
+    const timeoutId = setTimeout(measureVisibleTools, 100);
+    return () => clearTimeout(timeoutId);
+  }, [activeTool, panelWidth]);
+
+  useEffect(() => {
+    const container = tabsBarRef.current;
+    if (!container) return undefined;
+
+    const observer = new ResizeObserver(() => {
+      measureVisibleTools();
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!isOverflowOpen) return;
+      if (overflowMenuRef.current?.contains(event.target)) return;
+      if (moreButtonRef.current?.contains(event.target)) return;
+      setIsOverflowOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOverflowOpen]);
+
   const renderContent = () => {
     switch (activeTool) {
       case "console":
@@ -62,7 +152,15 @@ export default function DevToolsPanel({
         return <SandboxPanel />;
       case "device":
         return (
-          <DeviceSimPanel value={deviceSim} onChange={onDeviceSimChange} />
+          <DeviceSimPanel
+            value={deviceSim}
+            onChange={onDeviceSimChange}
+            url={activeTabUrl}
+            activeTabId={activeTabId}
+            onWebviewReady={onDevToolsWebviewReady}
+            onConsoleMessage={onDevToolsConsoleMessage}
+            onApiRequest={onDevToolsApiRequest}
+          />
         );
       case "ai":
         return (
@@ -87,19 +185,79 @@ export default function DevToolsPanel({
   return (
     <div className="devtools-panel" style={{ width: panelWidth }}>
       <div className="devtools-panel__resize" onMouseDown={handleMouseDown} />
-      <div className="devtools-panel__tabs">
-        {TOOLS.map((tool) => (
-          <button
-            key={tool.id}
-            className={`devtools-tab ${activeTool === tool.id ? "devtools-tab--active" : ""}`}
-            onClick={() => onToolChange(tool.id)}
-            title={tool.label}
-          >
-            <span className="devtools-tab__icon">{tool.icon}</span>
-            <span>{tool.label}</span>
-          </button>
-        ))}
+
+      <div className="devtools-panel__tabs" ref={tabsBarRef}>
+        <div className="devtools-tabs__list">
+        {TOOLS.map((tool) => {
+          const Icon = tool.icon;
+
+          if (!visibleToolIds.includes(tool.id)) return null;
+
+          return (
+            <button
+              key={tool.id}
+              ref={(el) => {
+                if (el) tabButtonRefs.current[tool.id] = el;
+              }}
+              className={`devtools-tab ${
+                activeTool === tool.id ? "devtools-tab--active" : ""
+              }`}
+              onClick={() => onToolChange(tool.id)}
+              title={tool.label}
+            >
+              <span className="devtools-tab__icon">
+                <Icon size={18} />
+              </span>
+              <span>{tool.label}</span>
+            </button>
+          );
+        })}
+        </div>
+
+        {overflowTools.length > 0 && (
+          <div className="devtools-tabs__overflow" ref={overflowMenuRef}>
+            <button
+              ref={moreButtonRef}
+              className={`devtools-tabs__more-button ${
+                isOverflowOpen ? "devtools-tabs__more-button--active" : ""
+              }`}
+              onClick={() => setIsOverflowOpen((prev) => !prev)}
+              title="More tools"
+              aria-haspopup="menu"
+              aria-expanded={isOverflowOpen}
+            >
+              <MoreHorizontal size={18} />
+            </button>
+
+            {isOverflowOpen && (
+              <div className="devtools-tabs__menu" role="menu">
+                {overflowTools.map((tool) => {
+                  const Icon = tool.icon;
+                  return (
+                    <button
+                      key={tool.id}
+                      className={`devtools-tabs__menu-item ${
+                        activeTool === tool.id ? "devtools-tabs__menu-item--active" : ""
+                      }`}
+                      onClick={() => {
+                        onToolChange(tool.id);
+                        setIsOverflowOpen(false);
+                      }}
+                      role="menuitem"
+                    >
+                      <span className="devtools-tab__icon">
+                        <Icon size={16} />
+                      </span>
+                      <span>{tool.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
       <div className="devtools-panel__content">{renderContent()}</div>
     </div>
   );

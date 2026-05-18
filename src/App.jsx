@@ -24,6 +24,7 @@ export default function App() {
     width: 390,
     height: 844,
     orientation: "portrait",
+    multiPane: false,
   });
   const [tabHtml, setTabHtml] = useState({});
   const [aiDraft, setAiDraft] = useState({ id: 0, text: "" });
@@ -151,6 +152,21 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Ensure selecting the Device tool opens the multi-pane viewer in the main area
+  useEffect(() => {
+    if (activeTool === "device") {
+      setDeviceSim((prev) => ({ ...prev, enabled: true, multiPane: true }));
+    } else {
+      setDeviceSim((prev) => ({ ...prev, enabled: false, multiPane: false }));
+    }
+  }, [activeTool]);
+
+  // Close the devtools sidebar when the Device tool is selected so the
+  // multi-pane viewer can use the entire main browser area.
+  useEffect(() => {
+    if (activeTool === "device") setDevToolsOpen(false);
+  }, [activeTool]);
+
   useEffect(() => {
     if (!window.electronAPI?.onNetworkEvent) return undefined;
     const unsubscribe = window.electronAPI.onNetworkEvent((entry) => {
@@ -227,6 +243,8 @@ export default function App() {
             webview.reload();
           }
         }}
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
         devToolsOpen={devToolsOpen}
         onToggleDevTools={() => setDevToolsOpen((p) => !p)}
       />
@@ -319,6 +337,57 @@ export default function App() {
             activeTabHtmlUpdatedAt={tabHtml[activeTabId]?.updatedAt || null}
             aiDraft={aiDraft}
             latestApiRequest={latestApiRequestByTab[activeTabId] || null}
+            activeTabId={activeTabId}
+            activeTabUrl={activeTab?.url || ""}
+            onDevToolsWebviewReady={(webContentsId, webview) => {
+              webviewRefs.current[activeTabId] = webview;
+              tabToWebContents.current.set(activeTabId, webContentsId);
+              webContentsToTab.current.set(webContentsId, activeTabId);
+              window.electronAPI?.attachNetwork?.(webContentsId);
+            }}
+            onDevToolsConsoleMessage={(entry) => {
+              const levelMap = {
+                0: "log",
+                1: "warn",
+                2: "error",
+                3: "info",
+              };
+              const type = levelMap[entry.level] || "log";
+              const time = new Date().toLocaleTimeString("en-US", {
+                hour12: false,
+              });
+              setConsoleLogs((prev) => {
+                const next = { ...prev };
+                const list = next[activeTabId] ? [...next[activeTabId]] : [];
+                list.unshift({
+                  type,
+                  text: entry.message,
+                  time,
+                  sourceId: entry.sourceId,
+                  line: entry.line,
+                });
+                next[activeTabId] = list.slice(0, 200);
+                return next;
+              });
+            }}
+            onDevToolsApiRequest={(payload) => {
+              const method = payload?.method ? String(payload.method) : "";
+              const url = payload?.url ? String(payload.url) : "";
+              if (!method || !url) return;
+              setLatestApiRequestByTab((prev) => ({
+                ...prev,
+                [activeTabId]: {
+                  method,
+                  url,
+                  headers: payload?.headers || {},
+                  body: payload?.body,
+                  source: payload?.source || "webview",
+                  resourceType: payload?.source || "webview",
+                  status: null,
+                  receivedAt: payload?.capturedAt || Date.now(),
+                },
+              }));
+            }}
           />
         )}
       </div>

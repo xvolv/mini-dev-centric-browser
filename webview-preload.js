@@ -1,14 +1,15 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer } = require("electron");
 
 let pendingTimer = null;
+let scrollTimeout = null;
 
 const safeToString = (value) => {
-  if (value == null) return '';
-  if (typeof value === 'string') return value;
+  if (value == null) return "";
+  if (typeof value === "string") return value;
   try {
     return JSON.stringify(value);
   } catch {
-    return '';
+    return "";
   }
 };
 
@@ -29,7 +30,7 @@ const serializeHeaders = (headers) => {
       return acc;
     }, {});
   }
-  if (typeof headers === 'object') {
+  if (typeof headers === "object") {
     return Object.keys(headers).reduce((acc, key) => {
       acc[key] = String(headers[key]);
       return acc;
@@ -40,23 +41,23 @@ const serializeHeaders = (headers) => {
 
 const normalizeBody = (body) => {
   if (body == null) return undefined;
-  if (typeof body === 'string') return body;
+  if (typeof body === "string") return body;
   if (body instanceof URLSearchParams) return body.toString();
-  if (typeof body === 'object') return safeToString(body);
+  if (typeof body === "object") return safeToString(body);
   return String(body);
 };
 
 const sendApiRequest = (payload) => {
   if (!payload || !payload.url || !payload.method) return;
-  ipcRenderer.sendToHost('api-request', payload);
+  ipcRenderer.sendToHost("api-request", payload);
 };
 
 const sendSelection = () => {
   const selection = window.getSelection?.();
-  const text = selection ? selection.toString().trim() : '';
+  const text = selection ? selection.toString().trim() : "";
 
   if (!text || !selection || selection.rangeCount === 0) {
-    ipcRenderer.sendToHost('selection-change', { text: '' });
+    ipcRenderer.sendToHost("selection-change", { text: "" });
     return;
   }
 
@@ -72,7 +73,7 @@ const sendSelection = () => {
     },
   };
 
-  ipcRenderer.sendToHost('selection-change', payload);
+  ipcRenderer.sendToHost("selection-change", payload);
 };
 
 const scheduleSelection = () => {
@@ -82,10 +83,23 @@ const scheduleSelection = () => {
   pendingTimer = setTimeout(sendSelection, 80);
 };
 
-window.addEventListener('mouseup', scheduleSelection, true);
-window.addEventListener('keyup', scheduleSelection, true);
-window.addEventListener('selectionchange', scheduleSelection, true);
-window.addEventListener('scroll', scheduleSelection, true);
+const sendScrollEvent = () => {
+  const scrollY = window.scrollY || 0;
+  ipcRenderer.sendToHost("scroll-event", scrollY);
+};
+
+const scheduleScrollEvent = () => {
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+  }
+  scrollTimeout = setTimeout(sendScrollEvent, 16);
+};
+
+window.addEventListener("mouseup", scheduleSelection, true);
+window.addEventListener("keyup", scheduleSelection, true);
+window.addEventListener("selectionchange", scheduleSelection, true);
+window.addEventListener("scroll", scheduleSelection, true);
+window.addEventListener("scroll", scheduleScrollEvent, true);
 
 const originalFetch = window.fetch?.bind(window);
 
@@ -93,11 +107,18 @@ if (originalFetch) {
   window.fetch = async (input, init = {}) => {
     try {
       const request = input instanceof Request ? input : null;
-      const method = (init.method || request?.method || 'GET').toUpperCase();
-      const url = typeof input === 'string' ? input : request?.url || '';
+      const method = (init.method || request?.method || "GET").toUpperCase();
+      const url = typeof input === "string" ? input : request?.url || "";
       const headers = serializeHeaders(init.headers || request?.headers);
       const body = normalizeBody(init.body);
-      sendApiRequest({ method, url, headers, body, source: 'fetch', capturedAt: Date.now() });
+      sendApiRequest({
+        method,
+        url,
+        headers,
+        body,
+        source: "fetch",
+        capturedAt: Date.now(),
+      });
     } catch {
       // ignore capture errors
     }
@@ -110,13 +131,16 @@ const originalXhrSend = XMLHttpRequest.prototype.send;
 const originalXhrSetHeader = XMLHttpRequest.prototype.setRequestHeader;
 
 XMLHttpRequest.prototype.open = function open(method, url, ...rest) {
-  this.__devcentricMethod = method ? String(method).toUpperCase() : 'GET';
-  this.__devcentricUrl = url ? String(url) : '';
+  this.__devcentricMethod = method ? String(method).toUpperCase() : "GET";
+  this.__devcentricUrl = url ? String(url) : "";
   this.__devcentricHeaders = {};
   return originalXhrOpen.call(this, method, url, ...rest);
 };
 
-XMLHttpRequest.prototype.setRequestHeader = function setRequestHeader(name, value) {
+XMLHttpRequest.prototype.setRequestHeader = function setRequestHeader(
+  name,
+  value,
+) {
   if (name) {
     this.__devcentricHeaders = this.__devcentricHeaders || {};
     this.__devcentricHeaders[String(name)] = String(value);
@@ -127,11 +151,11 @@ XMLHttpRequest.prototype.setRequestHeader = function setRequestHeader(name, valu
 XMLHttpRequest.prototype.send = function send(body) {
   try {
     sendApiRequest({
-      method: this.__devcentricMethod || 'GET',
-      url: this.__devcentricUrl || '',
+      method: this.__devcentricMethod || "GET",
+      url: this.__devcentricUrl || "",
       headers: this.__devcentricHeaders || {},
       body: normalizeBody(body),
-      source: 'xhr',
+      source: "xhr",
       capturedAt: Date.now(),
     });
   } catch {

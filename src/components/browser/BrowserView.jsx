@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import logo from "../../public/mini-dec-centric-logo.png";
+import MultiPaneView from "./MultiPaneView";
 
 export default function BrowserView({
   tabs,
@@ -26,7 +27,7 @@ export default function BrowserView({
   const hasActiveUrl = Boolean(activeTab && activeTab.url);
 
   const viewport = useMemo(() => {
-    if (!deviceSim?.enabled) return null;
+    if (!deviceSim?.enabled || deviceSim?.multiPane) return null;
     const width =
       deviceSim.orientation === "portrait" ? deviceSim.width : deviceSim.height;
     const height =
@@ -189,6 +190,32 @@ export default function BrowserView({
             Enter a URL above or open a new tab to start browsing
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Render multi-pane view when multi-pane mode is enabled
+  if (deviceSim?.enabled && deviceSim?.multiPane) {
+    return (
+      <div className="browser-view">
+        {isLoading && (
+          <div className="browser-view__loading">
+            <div className="browser-view__loading-bar" />
+          </div>
+        )}
+        <MultiPaneView
+          url={activeTab.url}
+          onWebviewReady={(webContentsId, webview) => {
+            webviewRefs.current[activeTab.id] = webview;
+            onWebviewReady?.(activeTab.id, webContentsId, webview);
+          }}
+          onConsoleMessage={(entry) => {
+            onConsoleMessage?.(activeTab.id, entry);
+          }}
+          onApiRequest={(payload) => {
+            onApiRequest?.(activeTab.id, payload);
+          }}
+        />
       </div>
     );
   }
