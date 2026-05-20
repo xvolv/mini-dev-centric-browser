@@ -5,8 +5,6 @@ import MultiPaneView from "./MultiPaneView";
 export default function BrowserView({
   tabs,
   activeTabId,
-  isLoading,
-  onLoadingChange,
   onTitleUpdate,
   onUrlUpdate,
   onNavStateChange,
@@ -25,6 +23,11 @@ export default function BrowserView({
   const webviewPreload = window.electronAPI?.webviewPreloadPath;
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const hasActiveUrl = Boolean(activeTab && activeTab.url);
+  const activeTabIdRef = useRef(activeTabId);
+  const tabsWithUrl = useMemo(
+    () => tabs.filter((tab) => Boolean(tab.url)),
+    [tabs],
+  );
 
   const viewport = useMemo(() => {
     if (!deviceSim?.enabled || deviceSim?.multiPane) return null;
@@ -38,6 +41,73 @@ export default function BrowserView({
   useEffect(() => {
     setSelectionInfo(null);
   }, [activeTabId]);
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
+
+  useEffect(() => {
+    const validTabIds = new Set(tabs.map((tab) => tab.id));
+    Object.keys(webviewRefs.current).forEach((tabId) => {
+      const numericId = Number(tabId);
+      if (!validTabIds.has(numericId)) {
+        delete webviewRefs.current[tabId];
+      }
+    });
+  }, [tabs]);
+
+  const registerWebview = (tabId) => (el) => {
+    if (!el) return;
+    webviewRefs.current[tabId] = el;
+
+    if (!el.__devcentricConsoleAttached) {
+      el.__devcentricConsoleAttached = true;
+      el.addEventListener("console-message", (event) => {
+        onConsoleMessage?.(tabId, {
+          level: event.level,
+          message: event.message,
+          line: event.line,
+          sourceId: event.sourceId,
+        });
+      });
+    }
+
+    if (!el.__devcentricSelectionAttached) {
+      el.__devcentricSelectionAttached = true;
+      el.addEventListener("ipc-message", (event) => {
+        if (event.channel === "selection-change") {
+          if (tabId !== activeTabIdRef.current) return;
+          const payload = event.args?.[0] || {};
+          const text =
+            typeof payload.text === "string" ? payload.text.trim() : "";
+          if (!text) {
+            setSelectionInfo(null);
+            return;
+          }
+          setSelectionInfo({
+            text,
+            rect: payload.rect || {},
+          });
+          return;
+        }
+
+        if (event.channel === "api-request") {
+          const payload = event.args?.[0] || {};
+          onApiRequest?.(tabId, payload);
+        }
+      });
+    }
+
+    if (!el.__devcentricReady) {
+      el.__devcentricReady = true;
+      el.addEventListener("dom-ready", () => {
+        const webContentsId = el.getWebContentsId?.();
+        if (typeof webContentsId === "number") {
+          onWebviewReady?.(tabId, webContentsId, el);
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     if (!selectionInfo?.rect) {
@@ -126,9 +196,7 @@ export default function BrowserView({
       }
     };
 
-    const handleStart = () => onLoadingChange?.(true);
     const handleStop = () => {
-      onLoadingChange?.(false);
       updateNavState();
       scheduleCapture(0);
       scheduleCapture(1500);
@@ -145,7 +213,6 @@ export default function BrowserView({
     };
     const handleFinish = () => scheduleCapture(0);
 
-    webview.addEventListener("did-start-loading", handleStart);
     webview.addEventListener("did-stop-loading", handleStop);
     webview.addEventListener("dom-ready", handleDomReady);
     webview.addEventListener("did-finish-load", handleFinish);
@@ -156,7 +223,6 @@ export default function BrowserView({
     updateNavState();
 
     return () => {
-      webview.removeEventListener("did-start-loading", handleStart);
       webview.removeEventListener("did-stop-loading", handleStop);
       webview.removeEventListener("dom-ready", handleDomReady);
       webview.removeEventListener("did-finish-load", handleFinish);
@@ -167,66 +233,51 @@ export default function BrowserView({
     };
   }, [
     activeTabId,
-    onLoadingChange,
     onNavStateChange,
     onTitleUpdate,
     onUrlUpdate,
     onPageContent,
   ]);
 
-  if (!hasActiveUrl) {
-    return (
-      <div className="browser-view">
-        <div className="browser-view__empty">
-          <img
-            className="browser-view__empty-logo"
-            src={logo}
-            alt="Mini Dev-Centric"
-          />
-          <div className="browser-view__empty-title">
-            Mini Dev-Centric Browser
-          </div>
-          <div className="browser-view__empty-subtitle">
-            Enter a URL above or open a new tab to start browsing
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Render multi-pane view when multi-pane mode is enabled
   if (deviceSim?.enabled && deviceSim?.multiPane) {
     return (
       <div className="browser-view">
-        {isLoading && (
-          <div className="browser-view__loading">
-            <div className="browser-view__loading-bar" />
+        {hasActiveUrl ? (
+          <MultiPaneView
+            url={activeTab.url}
+            onWebviewReady={(webContentsId, webview) => {
+              webviewRefs.current[activeTab.id] = webview;
+              onWebviewReady?.(activeTab.id, webContentsId, webview);
+            }}
+            onConsoleMessage={(entry) => {
+              onConsoleMessage?.(activeTab.id, entry);
+            }}
+            onApiRequest={(payload) => {
+              onApiRequest?.(activeTab.id, payload);
+            }}
+          />
+        ) : (
+          <div className="browser-view__empty">
+            <img
+              className="browser-view__empty-logo"
+              src={logo}
+              alt="Mini Dev-Centric"
+            />
+            <div className="browser-view__empty-title">
+              Mini Dev-Centric Browser
+            </div>
+            <div className="browser-view__empty-subtitle">
+              Enter a URL above or open a new tab to start browsing
+            </div>
           </div>
         )}
-        <MultiPaneView
-          url={activeTab.url}
-          onWebviewReady={(webContentsId, webview) => {
-            webviewRefs.current[activeTab.id] = webview;
-            onWebviewReady?.(activeTab.id, webContentsId, webview);
-          }}
-          onConsoleMessage={(entry) => {
-            onConsoleMessage?.(activeTab.id, entry);
-          }}
-          onApiRequest={(payload) => {
-            onApiRequest?.(activeTab.id, payload);
-          }}
-        />
       </div>
     );
   }
 
   return (
     <div className="browser-view" ref={containerRef}>
-      {isLoading && (
-        <div className="browser-view__loading">
-          <div className="browser-view__loading-bar" />
-        </div>
-      )}
       {viewport ? (
         <div className="browser-view__device-stage">
           <div
@@ -244,112 +295,65 @@ export default function BrowserView({
                 transform: `scale(${scale})`,
               }}
             >
-              <webview
-                key={activeTab.id}
-                src={activeTab.url}
-                preload={webviewPreload}
-                style={{ width: "100%", height: "100%" }}
-                ref={(el) => {
-                  if (!el) return;
-                  webviewRefs.current[activeTab.id] = el;
-                  if (!el.__devcentricConsoleAttached) {
-                    el.__devcentricConsoleAttached = true;
-                    el.addEventListener("console-message", (event) => {
-                      onConsoleMessage?.(activeTab.id, {
-                        level: event.level,
-                        message: event.message,
-                        line: event.line,
-                        sourceId: event.sourceId,
-                      });
-                    });
-                  }
-                  if (!el.__devcentricSelectionAttached) {
-                    el.__devcentricSelectionAttached = true;
-                    el.addEventListener("ipc-message", (event) => {
-                      if (event.channel === "selection-change") {
-                        const payload = event.args?.[0] || {};
-                        const text =
-                          typeof payload.text === "string"
-                            ? payload.text.trim()
-                            : "";
-                        if (!text) {
-                          setSelectionInfo(null);
-                          return;
-                        }
-                        setSelectionInfo({
-                          text,
-                          rect: payload.rect || {},
-                        });
-                        return;
-                      }
-                      if (event.channel === "api-request") {
-                        const payload = event.args?.[0] || {};
-                        onApiRequest?.(activeTabId, payload);
-                      }
-                    });
-                  }
-                  if (!el.__devcentricReady) {
-                    el.__devcentricReady = true;
-                    el.addEventListener("dom-ready", () => {
-                      const webContentsId = el.getWebContentsId?.();
-                      if (typeof webContentsId === "number") {
-                        onWebviewReady?.(activeTab.id, webContentsId, el);
-                      }
-                    });
-                  }
-                }}
-              />
+              {tabsWithUrl.map((tab) => (
+                <webview
+                  key={tab.id}
+                  src={tab.url}
+                  preload={webviewPreload}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    opacity: hasActiveUrl && tab.id === activeTabId ? 1 : 0,
+                    visibility:
+                      hasActiveUrl && tab.id === activeTabId
+                        ? "visible"
+                        : "hidden",
+                    pointerEvents:
+                      hasActiveUrl && tab.id === activeTabId ? "auto" : "none",
+                  }}
+                  ref={registerWebview(tab.id)}
+                />
+              ))}
             </div>
           </div>
         </div>
       ) : (
-        <webview
-          key={activeTab.id}
-          src={activeTab.url}
-          preload={webviewPreload}
-          style={{ width: "100%", height: "100%" }}
-          ref={(el) => {
-            if (!el) return;
-            webviewRefs.current[activeTab.id] = el;
-            if (!el.__devcentricConsoleAttached) {
-              el.__devcentricConsoleAttached = true;
-              el.addEventListener("console-message", (event) => {
-                onConsoleMessage?.(activeTab.id, {
-                  level: event.level,
-                  message: event.message,
-                  line: event.line,
-                  sourceId: event.sourceId,
-                });
-              });
-            }
-            if (!el.__devcentricSelectionAttached) {
-              el.__devcentricSelectionAttached = true;
-              el.addEventListener("ipc-message", (event) => {
-                if (event.channel !== "selection-change") return;
-                const payload = event.args?.[0] || {};
-                const text =
-                  typeof payload.text === "string" ? payload.text.trim() : "";
-                if (!text) {
-                  setSelectionInfo(null);
-                  return;
-                }
-                setSelectionInfo({
-                  text,
-                  rect: payload.rect || {},
-                });
-              });
-            }
-            if (!el.__devcentricReady) {
-              el.__devcentricReady = true;
-              el.addEventListener("dom-ready", () => {
-                const webContentsId = el.getWebContentsId?.();
-                if (typeof webContentsId === "number") {
-                  onWebviewReady?.(activeTab.id, webContentsId, el);
-                }
-              });
-            }
-          }}
-        />
+        tabsWithUrl.map((tab) => (
+          <webview
+            key={tab.id}
+            src={tab.url}
+            preload={webviewPreload}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              opacity: hasActiveUrl && tab.id === activeTabId ? 1 : 0,
+              visibility:
+                hasActiveUrl && tab.id === activeTabId ? "visible" : "hidden",
+              pointerEvents:
+                hasActiveUrl && tab.id === activeTabId ? "auto" : "none",
+            }}
+            ref={registerWebview(tab.id)}
+          />
+        ))
+      )}
+      {!hasActiveUrl && (
+        <div className="browser-view__empty">
+          <img
+            className="browser-view__empty-logo"
+            src={logo}
+            alt="Mini Dev-Centric"
+          />
+          <div className="browser-view__empty-title">
+            Mini Dev-Centric Browser
+          </div>
+          <div className="browser-view__empty-subtitle">
+            Enter a URL above or open a new tab to start browsing
+          </div>
+        </div>
       )}
       {selectionPos && selectionInfo?.text && (
         <button

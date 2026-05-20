@@ -4,51 +4,81 @@ import { MoreHorizontal } from "lucide-react";
 
 /* ── Inline SVG icon primitives ───────────────────────────────────────── */
 const IconBack = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="10 3 5 8 10 13" />
   </svg>
 );
 
 const IconForward = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="6 3 11 8 6 13" />
   </svg>
 );
 
 const IconReload = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M13.5 8A5.5 5.5 0 1 1 10.2 3.1" />
     <polyline points="10 1 13.5 1 13.5 4.5" />
   </svg>
 );
 
-const IconStop = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-    <line x1="3" y1="3" x2="13" y2="13" />
-    <line x1="13" y1="3" x2="3" y2="13" />
-  </svg>
-);
-
 const IconLockSecure = () => (
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="7" width="10" height="8" rx="1.5" />
     <path d="M5 7V5a3 3 0 0 1 6 0v2" />
   </svg>
 );
 
 const IconLockInsecure = () => (
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="7" width="10" height="8" rx="1.5" />
     <path d="M5 7V5a3 3 0 0 1 6 0" />
     <line x1="11" y1="2" x2="13" y2="4" strokeWidth="1.5" />
-  </svg>
-);
-
-const IconDevTools = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 6 1 8 4 10" />
-    <polyline points="12 6 15 8 12 10" />
-    <line x1="9" y1="3" x2="7" y2="13" />
   </svg>
 );
 /* ───────────────────────────────────────────────────────────────────────── */
@@ -56,7 +86,6 @@ const IconDevTools = () => (
 export default function AddressBar({
   url,
   onNavigate,
-  isLoading,
   canGoBack,
   canGoForward,
   onBack,
@@ -64,12 +93,12 @@ export default function AddressBar({
   onReload,
   activeTool,
   onToolChange,
-  devToolsOpen,
-  onToggleDevTools,
 }) {
   const [inputValue, setInputValue] = useState(url);
   const inputRef = useRef(null);
-  const [visibleToolIds, setVisibleToolIds] = useState(TOOLS.map((tool) => tool.id));
+  const [visibleToolIds, setVisibleToolIds] = useState(
+    TOOLS.map((tool) => tool.id),
+  );
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const tabsBarRef = useRef(null);
   const moreButtonRef = useRef(null);
@@ -118,7 +147,9 @@ export default function AddressBar({
     }
 
     nextVisible.sort(
-      (leftId, rightId) => TOOLS.findIndex((tool) => tool.id === leftId) - TOOLS.findIndex((tool) => tool.id === rightId),
+      (leftId, rightId) =>
+        TOOLS.findIndex((tool) => tool.id === leftId) -
+        TOOLS.findIndex((tool) => tool.id === rightId),
     );
 
     setVisibleToolIds(nextVisible);
@@ -194,9 +225,9 @@ export default function AddressBar({
       <button
         className="addressbar__btn"
         onClick={onReload}
-        title={isLoading ? "Stop (Esc)" : "Reload (Ctrl+R)"}
+        title="Reload (Ctrl+R)"
       >
-        {isLoading ? <IconStop /> : <IconReload />}
+        <IconReload />
       </button>
       <form onSubmit={handleSubmit} className="addressbar__input-wrapper">
         <span
@@ -268,7 +299,9 @@ export default function AddressBar({
                     <button
                       key={tool.id}
                       className={`addressbar-tabs__menu-item ${
-                        activeTool === tool.id ? "addressbar-tabs__menu-item--active" : ""
+                        activeTool === tool.id
+                          ? "addressbar-tabs__menu-item--active"
+                          : ""
                       }`}
                       onClick={() => {
                         onToolChange(tool.id);
@@ -288,18 +321,7 @@ export default function AddressBar({
           </div>
         )}
 
-        <button
-          className={`addressbar__devtools-toggle ${
-            devToolsOpen ? "addressbar__devtools-toggle--active" : ""
-          }`}
-          onClick={onToggleDevTools}
-          title={devToolsOpen ? "Close DevTools (F12)" : "Open DevTools (F12)"}
-        >
-          <span className="addressbar__devtools-toggle-icon">
-            <IconDevTools />
-          </span>
-          <span>DevTools</span>
-        </button>
+
       </div>
     </div>
   );

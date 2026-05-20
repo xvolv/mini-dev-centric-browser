@@ -10,9 +10,7 @@ let nextTabId = 2;
 export default function App() {
   const [tabs, setTabs] = useState([{ id: 1, title: "New Tab", url: "" }]);
   const [activeTabId, setActiveTabId] = useState(1);
-  const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [activeTool, setActiveTool] = useState("console");
-  const [isLoading, setIsLoading] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [networkLogs, setNetworkLogs] = useState({});
@@ -143,10 +141,6 @@ export default function App() {
         e.preventDefault();
         handleNewTab();
       }
-      if (e.key === "F12") {
-        e.preventDefault();
-        setDevToolsOpen((p) => !p);
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -159,12 +153,6 @@ export default function App() {
     } else {
       setDeviceSim((prev) => ({ ...prev, enabled: false, multiPane: false }));
     }
-  }, [activeTool]);
-
-  // Close the devtools sidebar when the Device tool is selected so the
-  // multi-pane viewer can use the entire main browser area.
-  useEffect(() => {
-    if (activeTool === "device") setDevToolsOpen(false);
   }, [activeTool]);
 
   useEffect(() => {
@@ -223,7 +211,6 @@ export default function App() {
       <AddressBar
         url={activeTab?.url || ""}
         onNavigate={handleNavigate}
-        isLoading={isLoading}
         canGoBack={canGoBack}
         canGoForward={canGoForward}
         onBack={() => {
@@ -234,26 +221,20 @@ export default function App() {
           const webview = getActiveWebview();
           if (webview?.canGoForward()) webview.goForward();
         }}
-        onReload={() => {
+          onReload={() => {
           const webview = getActiveWebview();
           if (!webview) return;
-          if (isLoading && webview.isLoading()) {
-            webview.stop();
-          } else {
-            webview.reload();
-          }
+          webview.reload();
         }}
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
-        devToolsOpen={devToolsOpen}
-        onToggleDevTools={() => setDevToolsOpen((p) => !p)}
+          activeTool={activeTool}
+          onToolChange={(id) => {
+            setActiveTool(id);
+          }}
       />
       <div className="main-content">
         <BrowserView
           tabs={tabs}
           activeTabId={activeTabId}
-          isLoading={isLoading}
-          onLoadingChange={setIsLoading}
           onTitleUpdate={handleTitleUpdate}
           onUrlUpdate={handleUrlUpdate}
           onNavStateChange={handleNavStateChange}
@@ -318,8 +299,7 @@ export default function App() {
             window.electronAPI?.attachNetwork?.(webContentsId);
           }}
         />
-        {devToolsOpen && (
-          <DevToolsPanel
+        <DevToolsPanel
             activeTool={activeTool}
             onToolChange={setActiveTool}
             consoleEntries={consoleLogs[activeTabId] || []}
@@ -388,8 +368,8 @@ export default function App() {
                 },
               }));
             }}
+            onClose={() => {}}
           />
-        )}
       </div>
     </div>
   );
