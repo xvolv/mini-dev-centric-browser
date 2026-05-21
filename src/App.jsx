@@ -228,7 +228,7 @@ export default function App() {
         }}
           activeTool={activeTool}
           onToolChange={(id) => {
-            setActiveTool(id);
+            setActiveTool((prev) => (prev === id ? null : id));
           }}
       />
       <div className="main-content">
@@ -299,7 +299,8 @@ export default function App() {
             window.electronAPI?.attachNetwork?.(webContentsId);
           }}
         />
-        <DevToolsPanel
+        {activeTool && activeTool !== "device" && (
+          <DevToolsPanel
             activeTool={activeTool}
             onToolChange={setActiveTool}
             consoleEntries={consoleLogs[activeTabId] || []}
@@ -368,8 +369,9 @@ export default function App() {
                 },
               }));
             }}
-            onClose={() => {}}
-          />
+              onClose={() => setActiveTool(null)}
+            />
+          )}
       </div>
     </div>
   );

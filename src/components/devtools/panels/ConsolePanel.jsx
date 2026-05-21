@@ -119,7 +119,7 @@ export default function ConsolePanel({ entries = [], onClear }) {
                     onClick={() => handleExplain(msg, id)}
                     title="Explain with AI"
                   >
-                    Explain
+                    Explain{" "}
                   </button>
                 )}
               </div>
@@ -131,7 +131,6 @@ export default function ConsolePanel({ entries = [], onClear }) {
         })}
         {filtered.length === 0 && (
           <div className="tool-panel__empty" style={{ padding: "40px 24px" }}>
-            <div className="tool-panel__empty-icon">📋</div>
             <div className="tool-panel__empty-title">No messages</div>
             <div className="tool-panel__empty-desc">
               Console output from web pages will appear here

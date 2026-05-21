@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import logo from "../../public/mini-dec-centric-logo.png";
 import MultiPaneView from "./MultiPaneView";
-
+import { Sparkles } from "lucide-react";
 export default function BrowserView({
   tabs,
   activeTabId,
@@ -358,14 +358,18 @@ export default function BrowserView({
       {selectionPos && selectionInfo?.text && (
         <button
           className="browser-view__selection-action"
-          style={{ left: selectionPos.x, top: selectionPos.y }}
+          style={{
+            backgroundColor: "gray",
+            left: selectionPos.x,
+            top: selectionPos.y,
+          }}
           title="Ask AI about selection"
           onClick={() => {
             onSelectionAction?.(selectionInfo);
             setSelectionInfo(null);
           }}
         >
-          AI
+          <Sparkles width={20} height={20} />
         </button>
       )}
     </div>

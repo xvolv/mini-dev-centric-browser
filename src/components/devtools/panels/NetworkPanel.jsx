@@ -70,7 +70,6 @@ export default function NetworkPanel({ entries = [], onClear }) {
         ))}
         {filtered.length === 0 && (
           <div className="tool-panel__empty" style={{ padding: "40px 24px" }}>
-            <div className="tool-panel__empty-icon">🌐</div>
             <div className="tool-panel__empty-title">No requests yet</div>
             <div className="tool-panel__empty-desc">
               Browse to a page to see network activity here.
