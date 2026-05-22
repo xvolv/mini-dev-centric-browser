@@ -159,6 +159,13 @@ body,
   position: relative;
 }
 
+.sandbox-page {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
 /* ===== TITLE BAR ===== */
 .titlebar {
   display: flex;
@@ -1509,7 +1516,11 @@ body,
 .network__detail-panel {
   border-left: 1px solid var(--border-muted);
   padding: 14px 14px 18px;
-  background: linear-gradient(180deg, rgba(11, 18, 32, 0.35), rgba(11, 18, 32, 0.15));
+  background: linear-gradient(
+    180deg,
+    rgba(11, 18, 32, 0.35),
+    rgba(11, 18, 32, 0.15)
+  );
 }
 
 .network__table {
@@ -1952,9 +1963,14 @@ body,
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
   height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(88, 166, 255, 0.08), transparent 34%),
+    radial-gradient(
+      circle at top left,
+      rgba(88, 166, 255, 0.08),
+      transparent 34%
+    ),
     linear-gradient(180deg, rgba(13, 17, 23, 0.98), rgba(13, 17, 23, 0.96));
 }
 
@@ -2060,8 +2076,8 @@ body,
 }
 
 .sandbox__workspace {
-  display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(360px, 1.05fr);
+  display: flex;
+  gap: 0;
   min-height: 0;
   flex: 1;
 }
@@ -2073,14 +2089,30 @@ body,
 }
 
 .sandbox__left-panel {
+  flex: 0 0 auto;
+  max-width: none;
+  min-width: 280px;
   border-right: 1px solid var(--border-muted);
-  background: linear-gradient(180deg, rgba(22, 27, 34, 0.4), rgba(13, 17, 23, 0.12));
+  background: linear-gradient(
+    180deg,
+    rgba(22, 27, 34, 0.4),
+    rgba(13, 17, 23, 0.12)
+  );
+}
+
+.sandbox__preview-panel {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .sandbox__preview-panel {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(13, 17, 23, 0.92), rgba(13, 17, 23, 0.98));
+  background: linear-gradient(
+    180deg,
+    rgba(13, 17, 23, 0.92),
+    rgba(13, 17, 23, 0.98)
+  );
 }
 
 .sandbox__editor-shell,
@@ -2090,6 +2122,16 @@ body,
   flex-direction: column;
   min-height: 0;
   height: 100%;
+}
+
+.sandbox__monaco-shell {
+  flex: 1;
+  min-height: 0;
+}
+
+.sandbox__monaco {
+  height: 100%;
+  width: 100%;
 }
 
 .sandbox__editor-heading,
@@ -2116,32 +2158,47 @@ body,
   font-weight: 600;
 }
 
-.sandbox__textarea {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: none;
-  padding: 14px 14px 16px;
-  font-family: var(--font-mono);
-  font-size: var(--font-xs);
-  resize: none;
-  outline: none;
-  line-height: 1.6;
-  tab-size: 2;
-}
-
-.sandbox__textarea:focus {
-  box-shadow: inset 0 0 0 1px rgba(88, 166, 255, 0.15);
-}
-
 .sandbox__preview-iframe {
   flex: 1;
   width: 100%;
   min-height: 0;
   border: none;
   background: #fff;
+}
+
+.sandbox__splitter {
+  flex: 0 0 10px;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.08)
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(0, 0, 0, 0.28);
+  position: relative;
+}
+
+.sandbox__splitter::after {
+  content: "";
+  position: absolute;
+  inset: 0 3px;
+  border-radius: 999px;
+  background: rgba(88, 166, 255, 0.28);
+  opacity: 0.85;
+}
+
+.sandbox__splitter:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(88, 166, 255, 0.8);
+}
+
+.sandbox--resizing,
+.sandbox--resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 .sandbox__console-list {
@@ -2249,12 +2306,27 @@ body,
 
 @media (max-width: 980px) {
   .sandbox__workspace {
-    grid-template-columns: minmax(280px, 1fr);
+    flex-direction: column;
   }
 
   .sandbox__left-panel {
     border-right: 0;
     border-bottom: 1px solid var(--border-muted);
+  }
+
+  .sandbox__splitter {
+    flex: 0 0 10px;
+    width: 100%;
+    height: 10px;
+    cursor: row-resize;
+    border-left: 0;
+    border-right: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.28);
+  }
+
+  .sandbox__splitter::after {
+    inset: 3px 0;
   }
 
   .sandbox__status-group,

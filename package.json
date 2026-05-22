@@ -11,13 +11,16 @@
     "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "better-sqlite3": "^12.10.0",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
     "lucide-react": "^1.16.0",
+    "monaco-editor": "^0.55.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "simple-git": "^3.24.0"
+    "simple-git": "^3.24.0",
+    "vite-plugin-monaco-editor": "^1.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

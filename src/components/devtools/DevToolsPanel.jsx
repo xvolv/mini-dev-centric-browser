@@ -39,7 +39,8 @@ export default function DevToolsPanel({
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(520);
   const activePointerId = useRef(null);
-  const maxPanelWidth = () => Math.max(window.innerWidth * 0.6, window.innerWidth - 320);
+  const maxPanelWidth = () =>
+    Math.max(window.innerWidth * 0.6, window.innerWidth - 320);
 
   const handlePointerDown = (event) => {
     event.preventDefault();
@@ -57,7 +58,9 @@ export default function DevToolsPanel({
       return;
     const delta = dragStartX.current - event.clientX;
     const nextWidth = dragStartWidth.current + delta;
-    setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(nextWidth, maxPanelWidth())));
+    setPanelWidth(
+      Math.max(MIN_PANEL_WIDTH, Math.min(nextWidth, maxPanelWidth())),
+    );
   };
 
   const handlePointerUp = () => {
