@@ -13,9 +13,14 @@ const {
 } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { randomUUID } = require("crypto");
 const simpleGit = require("simple-git");
 require("dotenv").config();
 const { initDatabase, closeDatabase } = require("./electron/database/db");
+const {
+  addNetworkRequest,
+  getNetworkRequests,
+} = require("./electron/database/network");
 const {
   addHistory,
   getHistory,
@@ -28,6 +33,7 @@ const {
   buildConsoleExportText,
   buildDefaultConsoleExportFilename,
 } = require("./electron/exporters/consoleExporter");
+const { buildNetworkExportText } = require("./electron/exporters/networkExporter");
 
 process.on("uncaughtException", (error) => {
   console.error("Uncaught exception in main process:", error);
@@ -42,14 +48,102 @@ process.on("exit", (code) => {
 });
 
 const isDev = !app.isPackaged;
+const appSessionId = randomUUID();
 
 let mainWindow;
 const trackedWebContents = new Set();
 const consoleTrackedWebContents = new Set();
 const historyTrackedWebContents = new Set();
-const requestStartTimes = new Map();
+const networkRequests = new Map();
 let webRequestAttached = false;
 let githubToken = null;
+
+function normalizeHeaders(headers) {
+  if (!headers || typeof headers !== "object") return {};
+
+  return Object.entries(headers).reduce((acc, [key, value]) => {
+    if (Array.isArray(value)) {
+      acc[key] = value.map((item) => String(item));
+      return acc;
+    }
+
+    if (value !== undefined && value !== null) {
+      acc[key] = String(value);
+    }
+
+    return acc;
+  }, {});
+}
+
+function getOrCreateNetworkRequest(details) {
+  const requestId = details.id;
+  const existing = networkRequests.get(requestId);
+
+  if (existing) {
+    return existing;
+  }
+
+  const record = {
+    requestId,
+    webContentsId: details.webContentsId,
+    method: details.method || "",
+    url: details.url || "",
+    resourceType: details.resourceType || "",
+    startedAt: Date.now(),
+    endedAt: null,
+    durationMs: null,
+    requestHeaders: {},
+    responseHeaders: {},
+    status: null,
+    statusCode: null,
+    fromCache: false,
+    size: 0,
+    failed: false,
+    error: null,
+    type: "pending",
+  };
+
+  networkRequests.set(requestId, record);
+  return record;
+}
+
+function finalizeNetworkRequest(details, outcome) {
+  const record = getOrCreateNetworkRequest(details);
+  const endedAt = Date.now();
+
+  record.webContentsId = details.webContentsId;
+  record.method = details.method || record.method;
+  record.url = details.url || record.url;
+  record.resourceType = details.resourceType || record.resourceType;
+  record.endedAt = endedAt;
+  record.durationMs = Math.max(0, endedAt - record.startedAt);
+  record.fromCache = Boolean(details.fromCache);
+  record.size = Number.isFinite(details.encodedDataLength)
+    ? details.encodedDataLength
+    : record.size;
+  record.type = outcome;
+
+  if (outcome === "completed") {
+    record.statusCode = details.statusCode ?? null;
+    record.status = details.statusCode ?? null;
+    record.failed = false;
+    record.error = null;
+  } else {
+    record.statusCode = null;
+    record.status = null;
+    record.failed = true;
+    record.error = details.error || "Unknown error";
+  }
+
+  const payload = {
+    ...record,
+    requestHeaders: normalizeHeaders(record.requestHeaders),
+    responseHeaders: normalizeHeaders(record.responseHeaders),
+  };
+
+  networkRequests.delete(details.id);
+  return payload;
+}
 
 function persistBrowsingHistory(webContentsId) {
   const contents = webContents.fromId(webContentsId);
@@ -274,45 +368,39 @@ function ensureWebRequestHandlers() {
   const webRequest = session.defaultSession.webRequest;
 
   webRequest.onBeforeRequest((details, callback) => {
-    requestStartTimes.set(details.id, Date.now());
+    getOrCreateNetworkRequest(details);
     callback({});
   });
 
+  webRequest.onBeforeSendHeaders((details, callback) => {
+    const record = getOrCreateNetworkRequest(details);
+    record.requestHeaders = normalizeHeaders(details.requestHeaders);
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+
+  webRequest.onHeadersReceived((details, callback) => {
+    const record = getOrCreateNetworkRequest(details);
+    record.responseHeaders = normalizeHeaders(details.responseHeaders);
+    callback({ cancel: false, responseHeaders: details.responseHeaders });
+  });
+
   webRequest.onCompleted((details) => {
+    const payload = finalizeNetworkRequest(details, "completed");
     if (!trackedWebContents.has(details.webContentsId)) return;
-    const start = requestStartTimes.get(details.id);
-    requestStartTimes.delete(details.id);
-    const durationMs = start ? Math.max(0, Date.now() - start) : null;
 
     mainWindow?.webContents.send("network:event", {
+      ...payload,
       type: "completed",
-      webContentsId: details.webContentsId,
-      method: details.method,
-      url: details.url,
-      status: details.statusCode,
-      fromCache: details.fromCache,
-      resourceType: details.resourceType,
-      size: details.encodedDataLength,
-      timeMs: durationMs,
     });
   });
 
   webRequest.onErrorOccurred((details) => {
+    const payload = finalizeNetworkRequest(details, "error");
     if (!trackedWebContents.has(details.webContentsId)) return;
-    const start = requestStartTimes.get(details.id);
-    requestStartTimes.delete(details.id);
-    const durationMs = start ? Math.max(0, Date.now() - start) : null;
 
     mainWindow?.webContents.send("network:event", {
+      ...payload,
       type: "error",
-      webContentsId: details.webContentsId,
-      method: details.method,
-      url: details.url,
-      status: details.error,
-      fromCache: details.fromCache,
-      resourceType: details.resourceType,
-      size: 0,
-      timeMs: durationMs,
     });
   });
 }
@@ -560,6 +648,96 @@ function createWindow() {
     } catch (error) {
       console.error("Failed to export console logs:", error);
       return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("network:persist", async (_event, tabId, entry) => {
+    try {
+      if (!entry || !entry.requestId) {
+        return { ok: false, error: "Request id is required." };
+      }
+
+      addNetworkRequest(
+        {
+          ...entry,
+          tabId: Number.isFinite(tabId) ? tabId : null,
+        },
+        appSessionId,
+      );
+      return { ok: true };
+    } catch (error) {
+      console.error("Failed to persist network request:", error);
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("network:export", async (_event, payload) => {
+    try {
+      console.log("network:export requested", {
+        format: payload?.format === "json" ? "json" : "txt",
+        count: Array.isArray(payload?.requestIds) ? payload.requestIds.length : 0,
+      });
+      const requestIds = Array.isArray(payload?.requestIds)
+        ? new Set(
+            payload.requestIds
+              .map((requestId) => String(requestId))
+              .filter(Boolean),
+          )
+        : null;
+      const entries = getNetworkRequests({ sessionId: appSessionId, limit: 2000 });
+      const exportEntries = requestIds && requestIds.size > 0
+        ? entries.filter((entry) => requestIds.has(String(entry.requestId)))
+        : entries;
+      const format = payload?.format === "json" ? "json" : "txt";
+      const windowRef = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+      const dialogOptions = {
+        title: "Export Network Logs",
+        defaultPath: `network_logs_${new Date().toISOString().replace(/[:.]/g, "-")}.${format}`,
+        filters:
+          format === "json"
+            ? [{ name: "JSON Files", extensions: ["json"] }]
+            : [{ name: "Text Files", extensions: ["txt"] }],
+      };
+
+      const result = windowRef
+        ? await dialog.showSaveDialog(windowRef, dialogOptions)
+        : await dialog.showSaveDialog(dialogOptions);
+
+      if (result.canceled || !result.filePath) {
+        return { ok: false, canceled: true };
+      }
+
+      const text =
+        format === "json"
+          ? JSON.stringify(
+              {
+                exportedAt: new Date().toISOString(),
+                count: exportEntries.length,
+                entries: exportEntries,
+              },
+              null,
+              2,
+            )
+          : buildNetworkExportText(exportEntries);
+
+      fs.writeFileSync(result.filePath, text, "utf-8");
+      console.log("network:export success", { filePath: result.filePath });
+      return { ok: true, filePath: result.filePath };
+    } catch (error) {
+      console.error("Failed to export network logs:", error);
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("network:history", async (_event, limit = 2000) => {
+    try {
+      return {
+        ok: true,
+        entries: getNetworkRequests({ limit }),
+      };
+    } catch (error) {
+      console.error("Failed to load network history:", error);
+      return { ok: false, error: error?.message || String(error), entries: [] };
     }
   });
 

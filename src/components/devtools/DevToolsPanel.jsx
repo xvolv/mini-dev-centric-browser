@@ -16,6 +16,9 @@ export default function DevToolsPanel({
   onClearConsole,
   networkEntries,
   onClearNetwork,
+  onExportNetwork,
+  networkHistoryEntries,
+  onRefreshNetworkHistory,
   deviceSim,
   onDeviceSimChange,
   activeTabTitle,
@@ -36,7 +39,7 @@ export default function DevToolsPanel({
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(520);
   const activePointerId = useRef(null);
-  const maxPanelWidth = () => window.innerWidth * 0.5;
+  const maxPanelWidth = () => Math.max(window.innerWidth * 0.6, window.innerWidth - 320);
 
   const handlePointerDown = (event) => {
     event.preventDefault();
@@ -72,7 +75,22 @@ export default function DevToolsPanel({
         );
       case "network":
         return (
-          <NetworkPanel entries={networkEntries} onClear={onClearNetwork} />
+          <NetworkPanel
+            entries={networkEntries}
+            onClear={onClearNetwork}
+            onExport={onExportNetwork}
+          />
+        );
+      case "network-history":
+        return (
+          <NetworkPanel
+            entries={networkHistoryEntries}
+            onClear={onRefreshNetworkHistory}
+            onExport={onExportNetwork}
+            primaryActionLabel="Refresh"
+            primaryActionTitle="Reload persisted network history"
+            primaryActionIcon="↻"
+          />
         );
       case "api":
         return <ApiTesterPanel latestRequest={latestApiRequest} />;

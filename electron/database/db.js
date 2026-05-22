@@ -55,6 +55,32 @@ async function initDatabase() {
          title TEXT,
          created_at INTEGER
        );
+       CREATE TABLE IF NOT EXISTS network_requests (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         session_id TEXT NOT NULL,
+         request_id TEXT NOT NULL,
+         tab_id INTEGER,
+         web_contents_id INTEGER,
+         method TEXT,
+         url TEXT,
+         status INTEGER,
+         status_text TEXT,
+         resource_type TEXT,
+         content_type TEXT,
+         from_cache INTEGER DEFAULT 0,
+         size INTEGER DEFAULT 0,
+         duration_ms INTEGER,
+         started_at INTEGER,
+         ended_at INTEGER,
+         request_headers TEXT,
+         response_headers TEXT,
+         request_body TEXT,
+         response_body TEXT,
+         failed INTEGER DEFAULT 0,
+         error TEXT,
+         created_at INTEGER,
+         UNIQUE(session_id, request_id)
+       );
      `);
 
     database = nextDatabase;

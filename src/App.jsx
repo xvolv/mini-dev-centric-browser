@@ -20,6 +20,7 @@ export default function App() {
   const [canGoForward, setCanGoForward] = useState(false);
 
   const [networkLogs, setNetworkLogs] = useState({});
+  const [networkHistoryEntries, setNetworkHistoryEntries] = useState([]);
   const [latestApiRequestByTab, setLatestApiRequestByTab] = useState({});
   const [consoleLogs, setConsoleLogs] = useState({});
   const [bookmarks, setBookmarks] = useState([]);
@@ -40,6 +41,7 @@ export default function App() {
   const tabToWebContents = useRef(new Map());
   const webContentsToTab = useRef(new Map());
   const recentConsoleKeysRef = useRef(new Map());
+  const pendingApiRequestsByTabRef = useRef(new Map());
 
   const requestAddressBarFocus = useRef(() => {});
 
@@ -90,6 +92,203 @@ export default function App() {
       next[tabId] = list.slice(0, 200);
       return next;
     });
+  }, []);
+
+  const queuePendingApiRequest = useCallback((tabId, payload) => {
+    if (tabId == null || !payload) return;
+
+    const method = payload.method ? String(payload.method) : "";
+    const url = payload.url ? String(payload.url) : "";
+    if (!method || !url) return;
+
+    const queue = pendingApiRequestsByTabRef.current.get(tabId) || [];
+    queue.unshift({
+      ...payload,
+      method,
+      url,
+      capturedAt: payload.capturedAt || Date.now(),
+    });
+
+    pendingApiRequestsByTabRef.current.set(tabId, queue.slice(0, 25));
+  }, []);
+
+  const consumePendingApiRequest = useCallback((tabId, entry) => {
+    const queue = pendingApiRequestsByTabRef.current.get(tabId) || [];
+    if (queue.length === 0) return null;
+
+    const method = entry?.method ? String(entry.method) : "";
+    const url = entry?.url ? String(entry.url) : "";
+    if (!method || !url) return null;
+
+    const startedAt = Number.isFinite(entry?.startedAt)
+      ? entry.startedAt
+      : Date.now();
+
+    const candidateIndex = queue.findIndex((item) => {
+      if (item.method !== method || item.url !== url) return false;
+      const capturedAt = Number.isFinite(item.capturedAt) ? item.capturedAt : 0;
+      return Math.abs(capturedAt - startedAt) < 15000;
+    });
+
+    if (candidateIndex < 0) return null;
+
+    const [match] = queue.splice(candidateIndex, 1);
+    pendingApiRequestsByTabRef.current.set(tabId, queue);
+    return match;
+  }, []);
+
+  const mergeApiRequestDetails = useCallback((tabId, payload) => {
+    if (tabId == null || !payload) return;
+
+    const method = payload.method ? String(payload.method) : "";
+    const url = payload.url ? String(payload.url) : "";
+    if (!method || !url) return;
+
+    const headers =
+      payload.headers && typeof payload.headers === "object"
+        ? payload.headers
+        : {};
+    const responseHeaders =
+      payload.responseHeaders && typeof payload.responseHeaders === "object"
+        ? payload.responseHeaders
+        : {};
+    const contentType =
+      typeof payload.contentType === "string"
+        ? payload.contentType
+        : headers["content-type"] || headers["Content-Type"] || "";
+
+    const common = {
+      method,
+      url,
+      headers,
+      body: payload.body,
+      responseBody: payload.responseBody,
+      responseHeaders,
+      contentType,
+      status: payload.status ?? null,
+      statusCode: payload.status ?? null,
+      source: payload.source || "webview",
+      resourceType: payload.source || "webview",
+      requestId: payload.requestId ?? null,
+      startedAt: payload.startedAt ?? null,
+      endedAt: payload.endedAt ?? null,
+      durationMs: payload.durationMs ?? null,
+      receivedAt: payload.capturedAt || payload.endedAt || Date.now(),
+    };
+
+    setNetworkLogs((prev) => {
+      const next = { ...prev };
+      const list = next[tabId] ? [...next[tabId]] : [];
+      if (list.length === 0) return prev;
+
+      const targetIndex = list.findIndex((entry) => {
+        const entryMethod = entry.method ? String(entry.method) : "";
+        const entryUrl = entry.url ? String(entry.url) : "";
+        if (entryMethod !== method || entryUrl !== url) return false;
+
+        const entryTime = Number.isFinite(entry.startedAt)
+          ? entry.startedAt
+          : Number.isFinite(entry.endedAt)
+            ? entry.endedAt
+            : Number.isFinite(entry.receivedAt)
+              ? entry.receivedAt
+              : 0;
+        const requestTime = common.receivedAt || Date.now();
+        return Math.abs(entryTime - requestTime) < 15000;
+      });
+
+      if (targetIndex < 0) return prev;
+
+      list[targetIndex] = {
+        ...list[targetIndex],
+        ...common,
+      };
+
+      next[tabId] = list;
+      return next;
+    });
+
+    setLatestApiRequestByTab((prev) => ({
+      ...prev,
+      [tabId]: common,
+    }));
+  }, []);
+
+  const persistNetworkRequest = useCallback((tabId, entry) => {
+    if (tabId == null || !entry?.requestId) return;
+    window.electronAPI?.persistNetworkRequest?.(tabId, entry);
+  }, []);
+
+  const loadNetworkHistory = useCallback(async () => {
+    try {
+      const result = await window.electronAPI?.getNetworkHistory?.(2000);
+      if (!result?.ok) {
+        setNetworkHistoryEntries([]);
+        return;
+      }
+      setNetworkHistoryEntries(Array.isArray(result.entries) ? result.entries : []);
+    } catch (error) {
+      console.error("Failed to load network history:", error);
+      setNetworkHistoryEntries([]);
+    }
+  }, []);
+
+  const sanitizeNetworkEntryForExport = useCallback((entry) => {
+    if (!entry || typeof entry !== "object") return {};
+
+    const safeValue = (value) => {
+      if (value === undefined || value === null) return null;
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        return value;
+      }
+      if (Array.isArray(value)) {
+        return value.map((item) => safeValue(item));
+      }
+      if (typeof value === "object") {
+        return Object.entries(value).reduce((acc, [key, nested]) => {
+          acc[key] = safeValue(nested);
+          return acc;
+        }, {});
+      }
+      return String(value);
+    };
+
+    return Object.entries(entry).reduce((acc, [key, value]) => {
+      acc[key] = safeValue(value);
+      return acc;
+    }, {});
+  }, []);
+
+  const handleExportNetwork = useCallback(async (format, entries) => {
+    try {
+      const requestIds = Array.isArray(entries)
+        ? entries
+            .map((entry) => entry?.requestId)
+            .filter((requestId) => requestId !== undefined && requestId !== null)
+            .map((requestId) => String(requestId))
+        : [];
+
+      console.log("handleExportNetwork: requesting export", { format, requestIdsCount: requestIds.length });
+
+      const result = await window.electronAPI?.exportNetworkLogs?.({ format, requestIds });
+
+      if (result?.canceled) return result;
+      if (!result?.ok) {
+        throw new Error(result?.error || "Failed to export network logs.");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Network export failed:", error);
+      window.alert?.(
+        error?.message || String(error) || "Failed to export network logs.",
+      );
+      return { ok: false, error: error?.message || String(error) };
+    }
   }, []);
 
   const getActiveWebview = useCallback(
@@ -296,6 +495,10 @@ export default function App() {
   }, [activeTool]);
 
   useEffect(() => {
+    loadNetworkHistory();
+  }, [loadNetworkHistory]);
+
+  useEffect(() => {
     if (!window.electronAPI?.onNetworkEvent) return undefined;
 
     const unsubscribe = window.electronAPI.onNetworkEvent((entry) => {
@@ -307,35 +510,59 @@ export default function App() {
         typeof entry.resourceType === "string" ? entry.resourceType : "";
 
       const isApiRequest = resourceType === "xhr" || resourceType === "fetch";
+      const pendingApiRequest = consumePendingApiRequest(tabId, entry);
+      const mergedEntry = pendingApiRequest
+        ? {
+            ...entry,
+            requestBody: pendingApiRequest.body,
+            requestHeaders:
+              pendingApiRequest.headers || entry.requestHeaders || {},
+            responseHeaders:
+              pendingApiRequest.responseHeaders || entry.responseHeaders || {},
+            responseBody: pendingApiRequest.responseBody,
+            contentType:
+              pendingApiRequest.contentType || entry.contentType || "",
+            statusCode:
+              pendingApiRequest.status ?? entry.statusCode ?? entry.status,
+            status:
+              pendingApiRequest.status ?? entry.statusCode ?? entry.status,
+            startedAt:
+              entry.startedAt || pendingApiRequest.startedAt || Date.now(),
+            endedAt: pendingApiRequest.endedAt || entry.endedAt || Date.now(),
+            durationMs:
+              pendingApiRequest.durationMs ?? entry.durationMs ?? entry.timeMs,
+          }
+        : entry;
 
       setNetworkLogs((prev) => {
         const next = { ...prev };
 
         const list = next[tabId] ? [...next[tabId]] : [];
 
-        list.unshift(entry);
+        list.unshift(mergedEntry);
 
         next[tabId] = list.slice(0, 200);
 
         return next;
       });
 
-      if (isApiRequest && entry.url && entry.method) {
-        setLatestApiRequestByTab((prev) => ({
-          ...prev,
-          [tabId]: {
-            method: entry.method,
-            url: entry.url,
-            status: entry.status,
-            resourceType,
-            receivedAt: Date.now(),
-          },
-        }));
+      persistNetworkRequest(tabId, mergedEntry);
+
+      setNetworkHistoryEntries((prev) => {
+        const next = [mergedEntry, ...prev.filter((item) => item.requestId !== mergedEntry.requestId)];
+        return next.slice(0, 2000);
+      });
+
+      if ((pendingApiRequest || isApiRequest) && mergedEntry.url && mergedEntry.method) {
+        mergeApiRequestDetails(tabId, {
+          ...mergedEntry,
+          source: isApiRequest ? resourceType : mergedEntry.source,
+        });
       }
     });
 
     return () => unsubscribe?.();
-  }, []);
+  }, [consumePendingApiRequest, mergeApiRequestDetails, persistNetworkRequest]);
 
   useEffect(() => {
     const webview = getActiveWebview();
@@ -481,25 +708,8 @@ export default function App() {
           deviceSim={deviceSim}
           onSelectionAction={handleSelectionAction}
           onApiRequest={(tabId, payload) => {
-            const method = payload?.method ? String(payload.method) : "";
-
-            const url = payload?.url ? String(payload.url) : "";
-
-            if (!method || !url) return;
-
-            setLatestApiRequestByTab((prev) => ({
-              ...prev,
-              [tabId]: {
-                method,
-                url,
-                headers: payload?.headers || {},
-                body: payload?.body,
-                source: payload?.source || "webview",
-                resourceType: payload?.source || "webview",
-                status: null,
-                receivedAt: payload?.capturedAt || Date.now(),
-              },
-            }));
+            queuePendingApiRequest(tabId, payload);
+            mergeApiRequestDetails(tabId, payload);
           }}
           onPageContent={(tabId, html) => {
             const limit = 100 * 1024;
@@ -551,6 +761,9 @@ export default function App() {
                 [activeTabId]: [],
               }));
             }}
+            onExportNetwork={handleExportNetwork}
+            networkHistoryEntries={networkHistoryEntries}
+            onRefreshNetworkHistory={loadNetworkHistory}
             deviceSim={deviceSim}
             onDeviceSimChange={setDeviceSim}
             activeTabTitle={activeTab?.title || ""}
@@ -576,25 +789,8 @@ export default function App() {
               });
             }}
             onDevToolsApiRequest={(payload) => {
-              const method = payload?.method ? String(payload.method) : "";
-
-              const url = payload?.url ? String(payload.url) : "";
-
-              if (!method || !url) return;
-
-              setLatestApiRequestByTab((prev) => ({
-                ...prev,
-                [activeTabId]: {
-                  method,
-                  url,
-                  headers: payload?.headers || {},
-                  body: payload?.body,
-                  source: payload?.source || "webview",
-                  resourceType: payload?.source || "webview",
-                  status: null,
-                  receivedAt: payload?.capturedAt || Date.now(),
-                },
-              }));
+              queuePendingApiRequest(activeTabId, payload);
+              mergeApiRequestDetails(activeTabId, payload);
             }}
             onBookmarkSelect={handleBookmarkSelect}
             currentTab={{

@@ -14,6 +14,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   attachNetwork: (webContentsId) =>
     ipcRenderer.send("network:attach", webContentsId),
+  persistNetworkRequest: (tabId, entry) =>
+    (async () => {
+      try {
+        return await ipcRenderer.invoke("network:persist", tabId, entry);
+      } catch (err) {
+        console.error("preload.persistNetworkRequest error:", err);
+        throw err;
+      }
+    })(),
+  exportNetworkLogs: (payload) => ipcRenderer.invoke("network:export", payload),
+  exportNetworkLogs: async (payload) => {
+    try {
+      return await ipcRenderer.invoke("network:export", payload);
+    } catch (err) {
+      console.error("preload.exportNetworkLogs error:", err);
+      throw err;
+    }
+  },
+  getNetworkHistory: (limit) => ipcRenderer.invoke("network:history", limit),
   onNetworkEvent: (callback) => {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on("network:event", listener);

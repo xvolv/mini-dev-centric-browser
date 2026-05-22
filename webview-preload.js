@@ -39,6 +39,20 @@ const serializeHeaders = (headers) => {
   return {};
 };
 
+const parseHeaderBlock = (headerBlock) => {
+  if (typeof headerBlock !== "string" || !headerBlock.trim()) return {};
+
+  return headerBlock.split(/\r?\n/).reduce((acc, line) => {
+    const separatorIndex = line.indexOf(":");
+    if (separatorIndex <= 0) return acc;
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+    if (!key) return acc;
+    acc[key] = value;
+    return acc;
+  }, {});
+};
+
 const normalizeBody = (body) => {
   if (body == null) return undefined;
   if (typeof body === "string") return body;
@@ -143,24 +157,45 @@ const originalFetch = window.fetch?.bind(window);
 
 if (originalFetch) {
   window.fetch = async (input, init = {}) => {
+    const startedAt = Date.now();
     try {
       const request = input instanceof Request ? input : null;
       const method = (init.method || request?.method || "GET").toUpperCase();
       const url = typeof input === "string" ? input : request?.url || "";
       const headers = serializeHeaders(init.headers || request?.headers);
-      const body = normalizeBody(init.body);
+      let body = normalizeBody(init.body);
+      if (body == null && request?.clone) {
+        try {
+          body = normalizeBody(await request.clone().text());
+        } catch {
+          body = undefined;
+        }
+      }
+      const response = await originalFetch(input, init);
+      let responseBody = "";
+      try {
+        responseBody = await response.clone().text();
+      } catch {
+        responseBody = "";
+      }
       sendApiRequest({
         method,
         url,
         headers,
         body,
         source: "fetch",
-        capturedAt: Date.now(),
+        capturedAt: startedAt,
+        status: response.status,
+        statusText: response.statusText,
+        responseHeaders: serializeHeaders(response.headers),
+        responseBody,
+        contentType: response.headers.get("content-type") || "",
       });
-    } catch {
+      return response;
+    } catch (error) {
       // ignore capture errors
+      throw error;
     }
-    return originalFetch(input, init);
   };
 }
 
@@ -187,15 +222,36 @@ XMLHttpRequest.prototype.setRequestHeader = function setRequestHeader(
 };
 
 XMLHttpRequest.prototype.send = function send(body) {
+  const startedAt = Date.now();
   try {
-    sendApiRequest({
-      method: this.__devcentricMethod || "GET",
-      url: this.__devcentricUrl || "",
-      headers: this.__devcentricHeaders || {},
-      body: normalizeBody(body),
-      source: "xhr",
-      capturedAt: Date.now(),
-    });
+    const finalizeRequest = () => {
+      this.removeEventListener("loadend", finalizeRequest);
+      this.removeEventListener("error", finalizeRequest);
+      let responseHeaders = {};
+      try {
+        responseHeaders = parseHeaderBlock(this.getAllResponseHeaders?.() || "");
+      } catch {
+        responseHeaders = {};
+      }
+
+      sendApiRequest({
+        method: this.__devcentricMethod || "GET",
+        url: this.__devcentricUrl || "",
+        headers: this.__devcentricHeaders || {},
+        body: normalizeBody(body),
+        source: "xhr",
+        capturedAt: startedAt,
+        status: this.status,
+        statusText: this.statusText || "",
+        responseHeaders,
+        responseBody: typeof this.responseText === "string" ? this.responseText : "",
+        contentType:
+          responseHeaders["content-type"] || responseHeaders["Content-Type"] || "",
+      });
+    };
+
+    this.addEventListener("loadend", finalizeRequest, { once: true });
+    this.addEventListener("error", finalizeRequest, { once: true });
   } catch {
     // ignore capture errors
   }
