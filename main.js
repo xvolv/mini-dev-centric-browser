@@ -33,7 +33,9 @@ const {
   buildConsoleExportText,
   buildDefaultConsoleExportFilename,
 } = require("./electron/exporters/consoleExporter");
-const { buildNetworkExportText } = require("./electron/exporters/networkExporter");
+const {
+  buildNetworkExportText,
+} = require("./electron/exporters/networkExporter");
 
 process.on("uncaughtException", (error) => {
   console.error("Uncaught exception in main process:", error);
@@ -448,6 +450,23 @@ function createWindow() {
     console.log("Main window did-finish-load", mainWindow.webContents.getURL());
   });
 
+  // Forward renderer console messages to the main process log for debugging
+  mainWindow.webContents.on(
+    "console-message",
+    (_event, level, message, line, sourceId) => {
+      try {
+        console.log("Renderer console:", {
+          level,
+          message: String(message || ""),
+          line,
+          sourceId,
+        });
+      } catch (err) {
+        // ignore
+      }
+    },
+  );
+
   mainWindow.webContents.on("did-navigate", (_event, url) => {
     console.log("Main window did-navigate", url);
   });
@@ -675,7 +694,9 @@ function createWindow() {
     try {
       console.log("network:export requested", {
         format: payload?.format === "json" ? "json" : "txt",
-        count: Array.isArray(payload?.requestIds) ? payload.requestIds.length : 0,
+        count: Array.isArray(payload?.requestIds)
+          ? payload.requestIds.length
+          : 0,
       });
       const requestIds = Array.isArray(payload?.requestIds)
         ? new Set(
@@ -684,12 +705,17 @@ function createWindow() {
               .filter(Boolean),
           )
         : null;
-      const entries = getNetworkRequests({ sessionId: appSessionId, limit: 2000 });
-      const exportEntries = requestIds && requestIds.size > 0
-        ? entries.filter((entry) => requestIds.has(String(entry.requestId)))
-        : entries;
+      const entries = getNetworkRequests({
+        sessionId: appSessionId,
+        limit: 2000,
+      });
+      const exportEntries =
+        requestIds && requestIds.size > 0
+          ? entries.filter((entry) => requestIds.has(String(entry.requestId)))
+          : entries;
       const format = payload?.format === "json" ? "json" : "txt";
-      const windowRef = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+      const windowRef =
+        mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
       const dialogOptions = {
         title: "Export Network Logs",
         defaultPath: `network_logs_${new Date().toISOString().replace(/[:.]/g, "-")}.${format}`,

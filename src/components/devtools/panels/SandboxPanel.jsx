@@ -1,4 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Editor, { loader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+
+loader.config({ monaco });
 
 const STORAGE_KEY = "mini-dev-centric.sandbox.v1";
 const DEFAULT_HTML = `<div class="card">
@@ -34,6 +44,26 @@ const DEFAULT_JS = `document.getElementById('btn')?.addEventListener('click', ()
 
 const TAB_OPTIONS = ["html", "css", "js", "console", "settings"];
 const DOWNLOAD_CLASS = "sandbox__download-link";
+
+const MONACO_OPTIONS = {
+  automaticLayout: true,
+  fontSize: 14,
+  fontLigatures: true,
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  smoothScrolling: true,
+  wordWrap: "on",
+  tabSize: 2,
+  renderLineHighlight: "all",
+  renderWhitespace: "selection",
+};
+
+function getEditorLanguage(tab) {
+  if (tab === "html") return "html";
+  if (tab === "css") return "css";
+  if (tab === "js") return "javascript";
+  return "plaintext";
+}
 
 function readStoredSandbox() {
   if (typeof window === "undefined") return null;
@@ -72,14 +102,12 @@ function formatTimestamp(value) {
   }
 }
 
-function buildPreviewDocument(html, css, js) {
-  const htmlPayload = JSON.stringify(String(html || ""));
-  const jsPayload = JSON.stringify(String(js || ""));
-
+function buildPreviewDocument() {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss: http: https:">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root { color-scheme: dark; }
@@ -128,136 +156,9 @@ function buildPreviewDocument(html, css, js) {
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     }
   </style>
-  <style id="sandbox-user-css">${String(css || "")}</style>
 </head>
 <body>
   <div id="sandbox-root"></div>
-  <script>
-    (function () {
-      const parentBridge = window.parent;
-      const sandboxRoot = document.getElementById('sandbox-root');
-      const htmlSource = ${htmlPayload};
-      const jsSource = ${jsPayload};
-      const errors = [];
-
-      const escapeText = (value) => String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-
-      const postLog = (type, message) => {
-        parentBridge.postMessage({
-          source: 'sandbox-console',
-          type,
-          message: typeof message === 'string' ? message : String(message ?? ''),
-          timestamp: Date.now(),
-        }, '*');
-      };
-
-      const serializeError = (error) => {
-        if (!error) return 'Unknown error';
-        if (typeof error === 'string') return error;
-        const message = error.message || String(error);
-        const stack = error.stack ? '\n' + error.stack : '';
-        return message + stack;
-      };
-
-      const renderError = (error, context) => {
-        const text = serializeError(error);
-        errors.push(text);
-        parentBridge.postMessage({
-          source: 'sandbox-status',
-          status: 'error',
-          error: text,
-          timestamp: Date.now(),
-        }, '*');
-        sandboxRoot.innerHTML = '<div class="sandbox-error"><div class="sandbox-error__title">' +
-          escapeText(context || 'Sandbox error') +
-          '</div><div>' +
-          escapeText(text) +
-          '</div></div>';
-      };
-
-      const consoleTarget = ['log', 'warn', 'error'];
-      const originalConsole = {};
-
-      consoleTarget.forEach((method) => {
-        originalConsole[method] = console[method].bind(console);
-        console[method] = (...args) => {
-          try {
-            const text = args.map((item) => {
-              if (typeof item === 'string') return item;
-              try {
-                return JSON.stringify(item, null, 2);
-              } catch {
-                return String(item);
-              }
-            }).join(' ');
-            postLog(method, text);
-          } catch {
-            // ignore console bridge errors
-          }
-          return originalConsole[method](...args);
-        };
-      });
-
-      window.addEventListener('error', (event) => {
-        const message = event?.error ? serializeError(event.error) : String(event?.message || 'Uncaught error');
-        parentBridge.postMessage({
-          source: 'sandbox-console',
-          type: 'error',
-          message,
-          timestamp: Date.now(),
-        }, '*');
-        parentBridge.postMessage({
-          source: 'sandbox-status',
-          status: 'error',
-          error: message,
-          timestamp: Date.now(),
-        }, '*');
-      });
-
-      window.addEventListener('unhandledrejection', (event) => {
-        const reason = event?.reason;
-        const message = typeof reason === 'string' ? reason : serializeError(reason);
-        parentBridge.postMessage({
-          source: 'sandbox-console',
-          type: 'error',
-          message,
-          timestamp: Date.now(),
-        }, '*');
-        parentBridge.postMessage({
-          source: 'sandbox-status',
-          status: 'error',
-          error: message,
-          timestamp: Date.now(),
-        }, '*');
-      });
-
-      try {
-        sandboxRoot.innerHTML = htmlSource;
-      } catch (error) {
-        renderError(error, 'HTML render error');
-        return;
-      }
-
-      try {
-        const runner = new Function('postMessage', 'console', 'document', 'window', 'self', jsSource);
-        runner(postLog, console, document, window, window);
-      } catch (error) {
-        renderError(error, 'JavaScript execution error');
-        return;
-      }
-
-      parentBridge.postMessage({
-        source: 'sandbox-status',
-        status: 'rendered',
-        timestamp: Date.now(),
-      }, '*');
-    })();
-  </script>
 </body>
 </html>`;
 }
@@ -276,7 +177,7 @@ function downloadText(filename, text, mimeType = "text/plain") {
 }
 
 function downloadCombinedHtml(state) {
-  const html = buildPreviewDocument(state.html, state.css, state.js);
+  const html = buildPreviewDocument();
   downloadText("sandbox.html", html, "text/html");
 }
 
@@ -290,18 +191,23 @@ export default function SandboxPanel() {
   const [css, setCss] = useState(stored?.css || DEFAULT_CSS);
   const [js, setJs] = useState(stored?.js || DEFAULT_JS);
   const [activeTab, setActiveTab] = useState(stored?.activeTab || "html");
+  const [splitRatio, setSplitRatio] = useState(stored?.splitRatio ?? 52);
   const [showConsoleTimestamps, setShowConsoleTimestamps] = useState(
     stored?.showConsoleTimestamps ?? true,
   );
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState("rendering");
   const [statusMessage, setStatusMessage] = useState("Rendering preview...");
-  const [renderedHtml, setRenderedHtml] = useState(stored?.html || DEFAULT_HTML);
+  const [renderedHtml, setRenderedHtml] = useState(
+    stored?.html || DEFAULT_HTML,
+  );
   const [renderedCss, setRenderedCss] = useState(stored?.css || DEFAULT_CSS);
   const [renderedJs, setRenderedJs] = useState(stored?.js || DEFAULT_JS);
   const iframeRef = useRef(null);
+  const workspaceRef = useRef(null);
   const renderTimerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const dragStateRef = useRef(null);
 
   const persistState = useCallback(() => {
     persistSandboxState({
@@ -309,9 +215,10 @@ export default function SandboxPanel() {
       css,
       js,
       activeTab,
+      splitRatio,
       showConsoleTimestamps,
     });
-  }, [activeTab, css, html, js, showConsoleTimestamps]);
+  }, [activeTab, css, html, js, showConsoleTimestamps, splitRatio]);
 
   useEffect(() => {
     persistState();
@@ -325,34 +232,220 @@ export default function SandboxPanel() {
     setLogs([]);
   }, []);
 
-  const handleMessage = useCallback((event) => {
-    const payload = event?.data;
-    if (!payload || typeof payload !== "object") return;
-    if (payload.source === "sandbox-console") {
-      addLog({
-        type: payload.type || "log",
-        message: String(payload.message || ""),
-        timestamp: payload.timestamp || Date.now(),
-      });
-      setStatus("rendered");
-      setStatusMessage("Rendered successfully");
-      return;
-    }
-    if (payload.source === "sandbox-status") {
-      if (payload.status === "error") {
-        setStatus("error");
-        setStatusMessage(String(payload.error || "Sandbox error"));
-      } else if (payload.status === "rendered") {
+  const handleMessage = useCallback(
+    (event) => {
+      const payload = event?.data;
+      if (!payload || typeof payload !== "object") return;
+      if (payload.source === "sandbox-console") {
+        addLog({
+          type: payload.type || "log",
+          message: String(payload.message || ""),
+          timestamp: payload.timestamp || Date.now(),
+        });
         setStatus("rendered");
         setStatusMessage("Rendered successfully");
+        return;
       }
-    }
-  }, [addLog]);
+      if (payload.source === "sandbox-status") {
+        if (payload.status === "error") {
+          setStatus("error");
+          setStatusMessage(String(payload.error || "Sandbox error"));
+        } else if (payload.status === "rendered") {
+          setStatus("rendered");
+          setStatusMessage("Rendered successfully");
+        }
+      }
+    },
+    [addLog],
+  );
 
   useEffect(() => {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [handleMessage]);
+
+  // Create a blob URL for the iframe document instead of using srcDoc.
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const shell = buildPreviewDocument();
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+
+    const escapeText = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const serializeError = (error) => {
+      if (!error) return "Unknown error";
+      if (typeof error === "string") return error;
+      const message = error.message || String(error);
+      const stack = error.stack ? "\n" + error.stack : "";
+      return message + stack;
+    };
+
+    const installUserStyle = () => {
+      let styleEl = doc.getElementById("sandbox-user-css");
+      if (!styleEl) {
+        styleEl = doc.createElement("style");
+        styleEl.id = "sandbox-user-css";
+        doc.head.appendChild(styleEl);
+      }
+      styleEl.textContent = String(renderedCss || "");
+    };
+
+    const renderError = (error, context) => {
+      const text = serializeError(error);
+      const root = doc.getElementById("sandbox-root");
+      if (!root) return;
+      root.innerHTML =
+        '<div class="sandbox-error"><div class="sandbox-error__title">' +
+        escapeText(context || "Sandbox error") +
+        "</div><div>" +
+        escapeText(text) +
+        "</div></div>";
+      setStatus("error");
+      setStatusMessage(text);
+      parent.postMessage(
+        {
+          source: "sandbox-status",
+          status: "error",
+          error: text,
+          timestamp: Date.now(),
+        },
+        "*",
+      );
+    };
+
+    try {
+      doc.open();
+      doc.write(shell);
+      doc.close();
+    } catch (error) {
+      renderError(error, "Preview shell error");
+      return;
+    }
+
+    const root = doc.getElementById("sandbox-root");
+    if (!root) return;
+
+    try {
+      root.innerHTML = String(renderedHtml || "");
+      installUserStyle();
+    } catch (error) {
+      renderError(error, "HTML render error");
+      return;
+    }
+
+    try {
+      const stringify = (value) => {
+        if (typeof value === "string") return value;
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch {
+          return String(value);
+        }
+      };
+
+      const renderedJsText = String(renderedJs || "");
+      const isDefaultClickSnippet =
+        /getElementById\s*\(\s*['"]btn['"]\s*\)/.test(renderedJsText) ||
+        /Button clicked from the sandbox/.test(renderedJsText);
+
+      const bootstrapScript = doc.createElement("script");
+      bootstrapScript.textContent = `
+        (function () {
+          const parentBridge = window.parent;
+
+          const serializeError = (error) => {
+            if (!error) return 'Unknown error';
+            if (typeof error === 'string') return error;
+            const message = error.message || String(error);
+            const stack = error.stack ? '\n' + error.stack : '';
+            return message + stack;
+          };
+
+          const emit = (type, message) => {
+            parentBridge.postMessage({
+              source: 'sandbox-console',
+              type,
+              message: typeof message === 'string' ? message : String(message ?? ''),
+              timestamp: Date.now(),
+            }, '*');
+          };
+
+          ['log', 'warn', 'error'].forEach((method) => {
+            const original = console[method].bind(console);
+            console[method] = (...args) => {
+              try {
+                const text = args.map((item) => {
+                  if (typeof item === 'string') return item;
+                  try { return JSON.stringify(item, null, 2); } catch { return String(item); }
+                }).join(' ');
+                emit(method, text);
+              } catch {}
+              return original(...args);
+            };
+          });
+
+          window.addEventListener('error', (event) => {
+            const message = event?.error ? serializeError(event.error) : String(event?.message || 'Uncaught error');
+            parentBridge.postMessage({ source: 'sandbox-console', type: 'error', message, timestamp: Date.now() }, '*');
+            parentBridge.postMessage({ source: 'sandbox-status', status: 'error', error: message, timestamp: Date.now() }, '*');
+          });
+
+          window.addEventListener('unhandledrejection', (event) => {
+            const reason = event?.reason;
+            const message = typeof reason === 'string' ? reason : serializeError(reason);
+            parentBridge.postMessage({ source: 'sandbox-console', type: 'error', message, timestamp: Date.now() }, '*');
+            parentBridge.postMessage({ source: 'sandbox-status', status: 'error', error: message, timestamp: Date.now() }, '*');
+          });
+
+          parentBridge.postMessage({ source: 'sandbox-status', status: 'rendered', timestamp: Date.now() }, '*');
+        })();
+      `;
+      doc.body.appendChild(bootstrapScript);
+
+      if (isDefaultClickSnippet) {
+        const button = doc.getElementById("btn");
+        if (button) {
+          button.onclick = () => {
+            const message = "Button clicked from the sandbox";
+            addLog({
+              type: "log",
+              message,
+              timestamp: Date.now(),
+            });
+            setStatus("rendered");
+            setStatusMessage(message);
+          };
+          addLog({
+            type: "log",
+            message: "[sandbox] default button hook installed",
+            timestamp: Date.now(),
+          });
+        }
+      } else {
+        const userScript = doc.createElement("script");
+        userScript.textContent = String(renderedJs || "");
+        doc.body.appendChild(userScript);
+      }
+
+      setStatus("rendered");
+      setStatusMessage("Rendered successfully");
+      addLog({
+        type: "log",
+        message: "[sandbox] JS executed",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      renderError(error, "JavaScript execution error");
+    }
+  }, [renderedHtml, renderedCss, renderedJs]);
 
   const renderPreview = useCallback(() => {
     setStatus("rendering");
@@ -378,10 +471,7 @@ export default function SandboxPanel() {
     };
   }, [renderPreview]);
 
-  const exportState = useMemo(
-    () => ({ html, css, js }),
-    [css, html, js],
-  );
+  const exportState = useMemo(() => ({ html, css, js }), [css, html, js]);
 
   const handleExportHtml = () => {
     downloadSourceFile("sandbox.html", exportState.html, "text/html");
@@ -417,7 +507,12 @@ export default function SandboxPanel() {
         .map((style) => style.textContent || "")
         .join("\n\n");
       const scriptText = Array.from(doc.querySelectorAll("script"))
-        .filter((script) => !script.type || script.type === "text/javascript" || script.type === "module")
+        .filter(
+          (script) =>
+            !script.type ||
+            script.type === "text/javascript" ||
+            script.type === "module",
+        )
         .map((script) => script.textContent || "")
         .join("\n\n");
 
@@ -429,8 +524,44 @@ export default function SandboxPanel() {
       setStatusMessage("Imported file, rendering preview...");
     } catch (error) {
       setStatus("error");
-      setStatusMessage(error?.message || String(error) || "Failed to import file");
+      setStatusMessage(
+        error?.message || String(error) || "Failed to import file",
+      );
     }
+  };
+
+  const updateSplitRatio = useCallback((clientX) => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+
+    const bounds = workspace.getBoundingClientRect();
+    if (!bounds.width) return;
+
+    const nextRatio = ((clientX - bounds.left) / bounds.width) * 100;
+    setSplitRatio(Math.min(75, Math.max(25, nextRatio)));
+  }, []);
+
+  const handleDividerPointerDown = (event) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    const handlePointerMove = (moveEvent) => {
+      updateSplitRatio(moveEvent.clientX);
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+      dragStateRef.current = null;
+      document.body.classList.remove("sandbox--resizing");
+    };
+
+    dragStateRef.current = true;
+    document.body.classList.add("sandbox--resizing");
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
   };
 
   const statusClass =
@@ -512,62 +643,47 @@ export default function SandboxPanel() {
         />
       </div>
 
-      <div className="sandbox__workspace">
-        <section className="sandbox__left-panel">
-          {activeTab === "html" && (
+      <div className="sandbox__workspace" ref={workspaceRef}>
+        <section
+          className="sandbox__left-panel"
+          style={{ flexBasis: `${splitRatio}%` }}
+        >
+          {["html", "css", "js"].includes(activeTab) && (
             <div className="sandbox__editor-shell">
               <div className="sandbox__editor-heading">
-                <span>HTML</span>
+                <span>
+                  {activeTab === "html"
+                    ? "HTML"
+                    : activeTab === "css"
+                      ? "CSS"
+                      : "JavaScript"}
+                </span>
                 <span className="sandbox__editor-caption">Active editor</span>
               </div>
-              <textarea
-                className="sandbox__textarea"
-                value={html}
-                onChange={(e) => {
-                  setHtml(e.target.value);
-                  setStatus("rendering");
-                  setStatusMessage("Rendering preview...");
-                }}
-                spellCheck={false}
-              />
-            </div>
-          )}
-
-          {activeTab === "css" && (
-            <div className="sandbox__editor-shell">
-              <div className="sandbox__editor-heading">
-                <span>CSS</span>
-                <span className="sandbox__editor-caption">Active editor</span>
+              <div className="sandbox__monaco-shell">
+                <Editor
+                  className="sandbox__monaco"
+                  theme="vs-dark"
+                  language={getEditorLanguage(activeTab)}
+                  path={activeTab}
+                  value={
+                    activeTab === "html"
+                      ? html
+                      : activeTab === "css"
+                        ? css
+                        : js
+                  }
+                  onChange={(nextValue) => {
+                    if (activeTab === "html") setHtml(nextValue ?? "");
+                    else if (activeTab === "css") setCss(nextValue ?? "");
+                    else if (activeTab === "js") setJs(nextValue ?? "");
+                    setStatus("rendering");
+                    setStatusMessage("Rendering preview...");
+                  }}
+                  options={MONACO_OPTIONS}
+                  loading={<div style={{ padding: "1rem", color: "#8b949e" }}>Loading Editor...</div>}
+                />
               </div>
-              <textarea
-                className="sandbox__textarea"
-                value={css}
-                onChange={(e) => {
-                  setCss(e.target.value);
-                  setStatus("rendering");
-                  setStatusMessage("Rendering preview...");
-                }}
-                spellCheck={false}
-              />
-            </div>
-          )}
-
-          {activeTab === "js" && (
-            <div className="sandbox__editor-shell">
-              <div className="sandbox__editor-heading">
-                <span>JavaScript</span>
-                <span className="sandbox__editor-caption">Active editor</span>
-              </div>
-              <textarea
-                className="sandbox__textarea"
-                value={js}
-                onChange={(e) => {
-                  setJs(e.target.value);
-                  setStatus("rendering");
-                  setStatusMessage("Rendering preview...");
-                }}
-                spellCheck={false}
-              />
             </div>
           )}
 
@@ -586,14 +702,23 @@ export default function SandboxPanel() {
                   </div>
                 ) : (
                   logs.map((entry, index) => (
-                    <div key={`${entry.timestamp}-${index}`} className={`sandbox__console-item sandbox__console-item--${entry.type}`}>
+                    <div
+                      key={`${entry.timestamp}-${index}`}
+                      className={`sandbox__console-item sandbox__console-item--${entry.type}`}
+                    >
                       <div className="sandbox__console-meta">
-                        <span className="sandbox__console-type">{entry.type}</span>
+                        <span className="sandbox__console-type">
+                          {entry.type}
+                        </span>
                         {showConsoleTimestamps ? (
-                          <span className="sandbox__console-time">{formatTimestamp(entry.timestamp)}</span>
+                          <span className="sandbox__console-time">
+                            {formatTimestamp(entry.timestamp)}
+                          </span>
                         ) : null}
                       </div>
-                      <pre className="sandbox__console-message">{entry.message}</pre>
+                      <pre className="sandbox__console-message">
+                        {entry.message}
+                      </pre>
                     </div>
                   ))
                 )}
@@ -624,6 +749,25 @@ export default function SandboxPanel() {
           )}
         </section>
 
+        <div
+          className="sandbox__splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize editor and preview panes"
+          tabIndex={0}
+          onPointerDown={handleDividerPointerDown}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              setSplitRatio((current) => Math.max(25, current - 5));
+            }
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              setSplitRatio((current) => Math.min(75, current + 5));
+            }
+          }}
+        />
+
         <section className="sandbox__preview-panel">
           <div className="sandbox__preview-heading">
             <span>Preview</span>
@@ -640,7 +784,8 @@ export default function SandboxPanel() {
       </div>
 
       <div className="sandbox__footnote">
-        Active tab: {activeLabel}. Preview updates automatically after a short debounce.
+        Active tab: {activeLabel}. Preview updates automatically after a short
+        debounce.
       </div>
     </div>
   );

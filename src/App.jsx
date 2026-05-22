@@ -4,6 +4,7 @@ import TabBar from "./components/layout/TabBar";
 import AddressBar from "./components/layout/AddressBar";
 import BookmarksBar from "./components/layout/BookmarksBar";
 import BrowserView from "./components/browser/BrowserView";
+import SandboxPanel from "./components/devtools/panels/SandboxPanel";
 import DevToolsPanel from "./components/devtools/DevToolsPanel";
 
 let nextTabId = 2;
@@ -226,7 +227,9 @@ export default function App() {
         setNetworkHistoryEntries([]);
         return;
       }
-      setNetworkHistoryEntries(Array.isArray(result.entries) ? result.entries : []);
+      setNetworkHistoryEntries(
+        Array.isArray(result.entries) ? result.entries : [],
+      );
     } catch (error) {
       console.error("Failed to load network history:", error);
       setNetworkHistoryEntries([]);
@@ -268,13 +271,21 @@ export default function App() {
       const requestIds = Array.isArray(entries)
         ? entries
             .map((entry) => entry?.requestId)
-            .filter((requestId) => requestId !== undefined && requestId !== null)
+            .filter(
+              (requestId) => requestId !== undefined && requestId !== null,
+            )
             .map((requestId) => String(requestId))
         : [];
 
-      console.log("handleExportNetwork: requesting export", { format, requestIdsCount: requestIds.length });
+      console.log("handleExportNetwork: requesting export", {
+        format,
+        requestIdsCount: requestIds.length,
+      });
 
-      const result = await window.electronAPI?.exportNetworkLogs?.({ format, requestIds });
+      const result = await window.electronAPI?.exportNetworkLogs?.({
+        format,
+        requestIds,
+      });
 
       if (result?.canceled) return result;
       if (!result?.ok) {
@@ -549,11 +560,18 @@ export default function App() {
       persistNetworkRequest(tabId, mergedEntry);
 
       setNetworkHistoryEntries((prev) => {
-        const next = [mergedEntry, ...prev.filter((item) => item.requestId !== mergedEntry.requestId)];
+        const next = [
+          mergedEntry,
+          ...prev.filter((item) => item.requestId !== mergedEntry.requestId),
+        ];
         return next.slice(0, 2000);
       });
 
-      if ((pendingApiRequest || isApiRequest) && mergedEntry.url && mergedEntry.method) {
+      if (
+        (pendingApiRequest || isApiRequest) &&
+        mergedEntry.url &&
+        mergedEntry.method
+      ) {
         mergeApiRequestDetails(tabId, {
           ...mergedEntry,
           source: isApiRequest ? resourceType : mergedEntry.source,
@@ -698,107 +716,115 @@ export default function App() {
       )}
 
       <div className="main-content">
-        <BrowserView
-          tabs={tabs}
-          activeTabId={activeTabId}
-          onTitleUpdate={handleTitleUpdate}
-          onUrlUpdate={handleUrlUpdate}
-          onFaviconUpdate={handleFaviconUpdate}
-          onNavStateChange={handleNavStateChange}
-          deviceSim={deviceSim}
-          onSelectionAction={handleSelectionAction}
-          onApiRequest={(tabId, payload) => {
-            queuePendingApiRequest(tabId, payload);
-            mergeApiRequestDetails(tabId, payload);
-          }}
-          onPageContent={(tabId, html) => {
-            const limit = 100 * 1024;
+        {activeTool === "sandbox" ? (
+          <div className="sandbox-page">
+            <SandboxPanel />
+          </div>
+        ) : (
+          <>
+            <BrowserView
+              tabs={tabs}
+              activeTabId={activeTabId}
+              onTitleUpdate={handleTitleUpdate}
+              onUrlUpdate={handleUrlUpdate}
+              onFaviconUpdate={handleFaviconUpdate}
+              onNavStateChange={handleNavStateChange}
+              deviceSim={deviceSim}
+              onSelectionAction={handleSelectionAction}
+              onApiRequest={(tabId, payload) => {
+                queuePendingApiRequest(tabId, payload);
+                mergeApiRequestDetails(tabId, payload);
+              }}
+              onPageContent={(tabId, html) => {
+                const limit = 100 * 1024;
 
-            const trimmed =
-              typeof html === "string" ? html.slice(0, limit) : "";
+                const trimmed =
+                  typeof html === "string" ? html.slice(0, limit) : "";
 
-            setTabHtml((prev) => ({
-              ...prev,
-              [tabId]: {
-                html: trimmed,
-                updatedAt: Date.now(),
-              },
-            }));
-          }}
-          onConsoleMessage={(tabId, entry) => {
-            if (shouldIgnoreConsoleMessage(entry.message)) return;
-            pushConsoleLog(tabId, {
-              ...entry,
-              timestamp: entry.timestamp || Date.now(),
-            });
-          }}
-          onWebviewReady={(tabId, webContentsId, webview) => {
-            webviewRefs.current[tabId] = webview;
+                setTabHtml((prev) => ({
+                  ...prev,
+                  [tabId]: {
+                    html: trimmed,
+                    updatedAt: Date.now(),
+                  },
+                }));
+              }}
+              onConsoleMessage={(tabId, entry) => {
+                if (shouldIgnoreConsoleMessage(entry.message)) return;
+                pushConsoleLog(tabId, {
+                  ...entry,
+                  timestamp: entry.timestamp || Date.now(),
+                });
+              }}
+              onWebviewReady={(tabId, webContentsId, webview) => {
+                webviewRefs.current[tabId] = webview;
 
-            tabToWebContents.current.set(tabId, webContentsId);
+                tabToWebContents.current.set(tabId, webContentsId);
 
-            webContentsToTab.current.set(webContentsId, tabId);
+                webContentsToTab.current.set(webContentsId, tabId);
 
-            window.electronAPI?.attachNetwork?.(webContentsId);
-          }}
-        />
+                window.electronAPI?.attachNetwork?.(webContentsId);
+              }}
+            />
 
-        {activeTool && activeTool !== "device" && (
-          <DevToolsPanel
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
-            consoleEntries={consoleLogs[activeTabId] || []}
-            onClearConsole={() => {
-              setConsoleLogs((prev) => ({
-                ...prev,
-                [activeTabId]: [],
-              }));
-            }}
-            networkEntries={networkLogs[activeTabId] || []}
-            onClearNetwork={() => {
-              setNetworkLogs((prev) => ({
-                ...prev,
-                [activeTabId]: [],
-              }));
-            }}
-            onExportNetwork={handleExportNetwork}
-            networkHistoryEntries={networkHistoryEntries}
-            onRefreshNetworkHistory={loadNetworkHistory}
-            deviceSim={deviceSim}
-            onDeviceSimChange={setDeviceSim}
-            activeTabTitle={activeTab?.title || ""}
-            activeTabHtml={tabHtml[activeTabId]?.html || ""}
-            activeTabHtmlUpdatedAt={tabHtml[activeTabId]?.updatedAt || null}
-            aiDraft={aiDraft}
-            latestApiRequest={latestApiRequestByTab[activeTabId] || null}
-            activeTabId={activeTabId}
-            activeTabUrl={activeTab?.url || ""}
-            onDevToolsWebviewReady={(webContentsId, webview) => {
-              webviewRefs.current[activeTabId] = webview;
+            {activeTool && activeTool !== "device" && (
+              <DevToolsPanel
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                consoleEntries={consoleLogs[activeTabId] || []}
+                onClearConsole={() => {
+                  setConsoleLogs((prev) => ({
+                    ...prev,
+                    [activeTabId]: [],
+                  }));
+                }}
+                networkEntries={networkLogs[activeTabId] || []}
+                onClearNetwork={() => {
+                  setNetworkLogs((prev) => ({
+                    ...prev,
+                    [activeTabId]: [],
+                  }));
+                }}
+                onExportNetwork={handleExportNetwork}
+                networkHistoryEntries={networkHistoryEntries}
+                onRefreshNetworkHistory={loadNetworkHistory}
+                deviceSim={deviceSim}
+                onDeviceSimChange={setDeviceSim}
+                activeTabTitle={activeTab?.title || ""}
+                activeTabHtml={tabHtml[activeTabId]?.html || ""}
+                activeTabHtmlUpdatedAt={tabHtml[activeTabId]?.updatedAt || null}
+                aiDraft={aiDraft}
+                latestApiRequest={latestApiRequestByTab[activeTabId] || null}
+                activeTabId={activeTabId}
+                activeTabUrl={activeTab?.url || ""}
+                onDevToolsWebviewReady={(webContentsId, webview) => {
+                  webviewRefs.current[activeTabId] = webview;
 
-              tabToWebContents.current.set(activeTabId, webContentsId);
+                  tabToWebContents.current.set(activeTabId, webContentsId);
 
-              webContentsToTab.current.set(webContentsId, activeTabId);
+                  webContentsToTab.current.set(webContentsId, activeTabId);
 
-              window.electronAPI?.attachNetwork?.(webContentsId);
-            }}
-            onDevToolsConsoleMessage={(entry) => {
-              pushConsoleLog(activeTabId, {
-                ...entry,
-                timestamp: entry.timestamp || Date.now(),
-              });
-            }}
-            onDevToolsApiRequest={(payload) => {
-              queuePendingApiRequest(activeTabId, payload);
-              mergeApiRequestDetails(activeTabId, payload);
-            }}
-            onBookmarkSelect={handleBookmarkSelect}
-            currentTab={{
-              url: activeTab?.url || "",
-              title: activeTab?.title || "",
-            }}
-            onClose={() => setActiveTool(null)}
-          />
+                  window.electronAPI?.attachNetwork?.(webContentsId);
+                }}
+                onDevToolsConsoleMessage={(entry) => {
+                  pushConsoleLog(activeTabId, {
+                    ...entry,
+                    timestamp: entry.timestamp || Date.now(),
+                  });
+                }}
+                onDevToolsApiRequest={(payload) => {
+                  queuePendingApiRequest(activeTabId, payload);
+                  mergeApiRequestDetails(activeTabId, payload);
+                }}
+                onBookmarkSelect={handleBookmarkSelect}
+                currentTab={{
+                  url: activeTab?.url || "",
+                  title: activeTab?.title || "",
+                }}
+                onClose={() => setActiveTool(null)}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
