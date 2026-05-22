@@ -1,5 +1,4 @@
 import React, { useRef, useState } from "react";
-import { TOOLS } from "../../data/tools";
 import ConsolePanel from "./panels/ConsolePanel";
 import NetworkPanel from "./panels/NetworkPanel";
 import ApiTesterPanel from "./panels/ApiTesterPanel";
@@ -17,6 +16,9 @@ export default function DevToolsPanel({
   onClearConsole,
   networkEntries,
   onClearNetwork,
+  onExportNetwork,
+  networkHistoryEntries,
+  onRefreshNetworkHistory,
   deviceSim,
   onDeviceSimChange,
   activeTabTitle,
@@ -24,26 +26,45 @@ export default function DevToolsPanel({
   activeTabHtmlUpdatedAt,
   aiDraft,
   latestApiRequest,
+  activeTabId,
+  activeTabUrl,
+  onDevToolsWebviewReady,
+  onDevToolsConsoleMessage,
+  onDevToolsApiRequest,
+  onClose,
 }) {
-  const [panelWidth, setPanelWidth] = useState(420);
+  const MIN_PANEL_WIDTH = 520;
+  const [panelWidth, setPanelWidth] = useState(520);
   const isResizing = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(520);
+  const activePointerId = useRef(null);
+  const maxPanelWidth = () => Math.max(window.innerWidth * 0.6, window.innerWidth - 320);
 
-  const handleMouseDown = () => {
+  const handlePointerDown = (event) => {
+    event.preventDefault();
     isResizing.current = true;
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    activePointerId.current = event.pointerId;
+    dragStartX.current = event.clientX;
+    dragStartWidth.current = panelWidth;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
   };
 
-  const handleMouseMove = (e) => {
-    if (!isResizing.current) return;
-    const newWidth = window.innerWidth - e.clientX;
-    setPanelWidth(Math.max(360, Math.min(newWidth, window.innerWidth * 0.5)));
+  const handlePointerMove = (event) => {
+    if (!isResizing.current || event.pointerId !== activePointerId.current)
+      return;
+    const delta = dragStartX.current - event.clientX;
+    const nextWidth = dragStartWidth.current + delta;
+    setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(nextWidth, maxPanelWidth())));
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     isResizing.current = false;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
+    activePointerId.current = null;
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
   };
 
   const renderContent = () => {
@@ -54,7 +75,22 @@ export default function DevToolsPanel({
         );
       case "network":
         return (
-          <NetworkPanel entries={networkEntries} onClear={onClearNetwork} />
+          <NetworkPanel
+            entries={networkEntries}
+            onClear={onClearNetwork}
+            onExport={onExportNetwork}
+          />
+        );
+      case "network-history":
+        return (
+          <NetworkPanel
+            entries={networkHistoryEntries}
+            onClear={onRefreshNetworkHistory}
+            onExport={onExportNetwork}
+            primaryActionLabel="Refresh"
+            primaryActionTitle="Reload persisted network history"
+            primaryActionIcon="↻"
+          />
         );
       case "api":
         return <ApiTesterPanel latestRequest={latestApiRequest} />;
@@ -62,7 +98,15 @@ export default function DevToolsPanel({
         return <SandboxPanel />;
       case "device":
         return (
-          <DeviceSimPanel value={deviceSim} onChange={onDeviceSimChange} />
+          <DeviceSimPanel
+            value={deviceSim}
+            onChange={onDeviceSimChange}
+            url={activeTabUrl}
+            activeTabId={activeTabId}
+            onWebviewReady={onDevToolsWebviewReady}
+            onConsoleMessage={onDevToolsConsoleMessage}
+            onApiRequest={onDevToolsApiRequest}
+          />
         );
       case "ai":
         return (
@@ -80,26 +124,20 @@ export default function DevToolsPanel({
       case "settings":
         return <SettingsPanel />;
       default:
-        return <ConsolePanel />;
+        return null;
     }
   };
 
   return (
     <div className="devtools-panel" style={{ width: panelWidth }}>
-      <div className="devtools-panel__resize" onMouseDown={handleMouseDown} />
-      <div className="devtools-panel__tabs">
-        {TOOLS.map((tool) => (
-          <button
-            key={tool.id}
-            className={`devtools-tab ${activeTool === tool.id ? "devtools-tab--active" : ""}`}
-            onClick={() => onToolChange(tool.id)}
-            title={tool.label}
-          >
-            <span className="devtools-tab__icon">{tool.icon}</span>
-            <span>{tool.label}</span>
-          </button>
-        ))}
-      </div>
+      <div
+        className="devtools-panel__resize"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onLostPointerCapture={handlePointerUp}
+      />
       <div className="devtools-panel__content">{renderContent()}</div>
     </div>
   );
