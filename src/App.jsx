@@ -39,10 +39,58 @@ export default function App() {
   const webviewRefs = useRef({});
   const tabToWebContents = useRef(new Map());
   const webContentsToTab = useRef(new Map());
+  const recentConsoleKeysRef = useRef(new Map());
 
   const requestAddressBarFocus = useRef(() => {});
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  const pushConsoleLog = useCallback((tabId, entry) => {
+    if (tabId == null || !entry) return;
+
+    const key = [
+      tabId,
+      entry.level,
+      entry.message,
+      entry.line,
+      entry.sourceId,
+    ].join("|");
+    const now = Date.now();
+    const previous = recentConsoleKeysRef.current.get(key) || 0;
+    if (now - previous < 1000) return;
+    recentConsoleKeysRef.current.set(key, now);
+
+    const levelMap = {
+      0: "log",
+      1: "warn",
+      2: "error",
+      3: "info",
+    };
+
+    const type = levelMap[entry.level] || "log";
+
+    const time = new Date(entry.timestamp || now).toLocaleTimeString("en-US", {
+      hour12: false,
+    });
+
+    setConsoleLogs((prev) => {
+      const next = { ...prev };
+      const list = next[tabId] ? [...next[tabId]] : [];
+
+      list.unshift({
+        type,
+        text: String(entry.message || ""),
+        time,
+        timestamp: entry.timestamp || now,
+        sourceId: entry.sourceId,
+        line: entry.line,
+        stack: entry.stack || "",
+      });
+
+      next[tabId] = list.slice(0, 200);
+      return next;
+    });
+  }, []);
 
   const getActiveWebview = useCallback(
     () => webviewRefs.current[activeTabId],
@@ -125,6 +173,18 @@ export default function App() {
 
     setActiveTool("ai");
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.electronAPI?.onConsoleEvent?.((entry) => {
+      const tabId = webContentsToTab.current.get(entry.webContentsId);
+      if (tabId == null) return;
+      pushConsoleLog(tabId, entry);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, [pushConsoleLog]);
 
   const handleNewTab = () => {
     const id = nextTabId++;
@@ -455,36 +515,9 @@ export default function App() {
           }}
           onConsoleMessage={(tabId, entry) => {
             if (shouldIgnoreConsoleMessage(entry.message)) return;
-
-            const levelMap = {
-              0: "log",
-              1: "warn",
-              2: "error",
-              3: "info",
-            };
-
-            const type = levelMap[entry.level] || "log";
-
-            const time = new Date().toLocaleTimeString("en-US", {
-              hour12: false,
-            });
-
-            setConsoleLogs((prev) => {
-              const next = { ...prev };
-
-              const list = next[tabId] ? [...next[tabId]] : [];
-
-              list.unshift({
-                type,
-                text: entry.message,
-                time,
-                sourceId: entry.sourceId,
-                line: entry.line,
-              });
-
-              next[tabId] = list.slice(0, 200);
-
-              return next;
+            pushConsoleLog(tabId, {
+              ...entry,
+              timestamp: entry.timestamp || Date.now(),
             });
           }}
           onWebviewReady={(tabId, webContentsId, webview) => {
@@ -535,35 +568,9 @@ export default function App() {
               window.electronAPI?.attachNetwork?.(webContentsId);
             }}
             onDevToolsConsoleMessage={(entry) => {
-              const levelMap = {
-                0: "log",
-                1: "warn",
-                2: "error",
-                3: "info",
-              };
-
-              const type = levelMap[entry.level] || "log";
-
-              const time = new Date().toLocaleTimeString("en-US", {
-                hour12: false,
-              });
-
-              setConsoleLogs((prev) => {
-                const next = { ...prev };
-
-                const list = next[activeTabId] ? [...next[activeTabId]] : [];
-
-                list.unshift({
-                  type,
-                  text: entry.message,
-                  time,
-                  sourceId: entry.sourceId,
-                  line: entry.line,
-                });
-
-                next[activeTabId] = list.slice(0, 200);
-
-                return next;
+              pushConsoleLog(activeTabId, {
+                ...entry,
+                timestamp: entry.timestamp || Date.now(),
               });
             }}
             onDevToolsApiRequest={(payload) => {

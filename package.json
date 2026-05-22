@@ -41,6 +41,7 @@
       "preload.js",
       "webview-preload.js",
       "electron/database/**",
+      "electron/exporters/**",
       "assets/**",
       "package.json"
     ],

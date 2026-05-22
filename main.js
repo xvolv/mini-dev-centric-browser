@@ -17,11 +17,28 @@ const simpleGit = require("simple-git");
 require("dotenv").config();
 const { initDatabase, closeDatabase } = require("./electron/database/db");
 const { addHistory, getHistory, removeHistory, addBookmark, getBookmarks, removeBookmark } = require("./electron/database/history");
+const {
+  buildConsoleExportText,
+  buildDefaultConsoleExportFilename,
+} = require("./electron/exporters/consoleExporter");
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception in main process:", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection in main process:", reason);
+});
+
+process.on("exit", (code) => {
+  console.log("Main process exiting with code:", code);
+});
 
 const isDev = !app.isPackaged;
 
 let mainWindow;
 const trackedWebContents = new Set();
+const consoleTrackedWebContents = new Set();
 const historyTrackedWebContents = new Set();
 const requestStartTimes = new Map();
 let webRequestAttached = false;
@@ -59,6 +76,38 @@ function attachHistoryTracking(webContentsId) {
 
   contents.once("destroyed", () => {
     historyTrackedWebContents.delete(webContentsId);
+  });
+}
+
+function attachConsoleTracking(webContentsId) {
+  if (typeof webContentsId !== "number") return;
+  if (consoleTrackedWebContents.has(webContentsId)) return;
+
+  const contents = webContents.fromId(webContentsId);
+  if (!contents) return;
+
+  consoleTrackedWebContents.add(webContentsId);
+
+  const handleConsoleMessage = (_event, level, message, line, sourceId) => {
+    mainWindow?.webContents.send("console:event", {
+      webContentsId,
+      level,
+      message: String(message || ""),
+      line: Number.isFinite(line) ? line : 0,
+      sourceId: String(sourceId || ""),
+      timestamp: Date.now(),
+    });
+  };
+
+  contents.on("console-message", handleConsoleMessage);
+
+  contents.once("destroyed", () => {
+    consoleTrackedWebContents.delete(webContentsId);
+    try {
+      contents.removeListener("console-message", handleConsoleMessage);
+    } catch {
+      // ignore
+    }
   });
 }
 
@@ -259,6 +308,7 @@ function ensureWebRequestHandlers() {
 }
 
 function createWindow() {
+  console.log("Creating main window...");
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -274,6 +324,55 @@ function createWindow() {
       webviewTag: true,
     },
     icon: resolveAppIcon(),
+  });
+
+  mainWindow.on("closed", () => {
+    console.log("Main window closed");
+  });
+
+  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    console.error("Main window did-fail-load:", {
+      errorCode,
+      errorDescription,
+      validatedURL,
+      isMainFrame,
+    });
+  });
+
+  mainWindow.webContents.on("did-start-loading", () => {
+    console.log("Main window did-start-loading");
+  });
+
+  mainWindow.webContents.on("did-finish-load", () => {
+    console.log("Main window did-finish-load", mainWindow.webContents.getURL());
+  });
+
+  mainWindow.webContents.on("did-navigate", (_event, url) => {
+    console.log("Main window did-navigate", url);
+  });
+
+  mainWindow.webContents.on("did-navigate-in-page", (_event, url) => {
+    console.log("Main window did-navigate-in-page", url);
+  });
+
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    console.error("Main window render-process-gone:", details);
+  });
+
+  mainWindow.webContents.on("unresponsive", () => {
+    console.error("Main window webContents unresponsive");
+  });
+
+  mainWindow.webContents.on("crashed", (_event, killed) => {
+    console.error("Main window webContents crashed:", { killed });
+  });
+
+  mainWindow.webContents.on("destroyed", () => {
+    console.error("Main window webContents destroyed");
+  });
+
+  mainWindow.on("unresponsive", () => {
+    console.error("Main window became unresponsive");
   });
 
   const csp =
@@ -294,9 +393,13 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL("http://localhost:5173");
+    mainWindow.loadURL("http://localhost:5173").catch((error) => {
+      console.error("Failed to load dev URL:", error);
+    });
   } else {
-    mainWindow.loadFile(path.join(__dirname, "dist", "index.html"));
+    mainWindow.loadFile(path.join(__dirname, "dist", "index.html")).catch((error) => {
+      console.error("Failed to load production file:", error);
+    });
   }
 
   // Window control IPC handlers
@@ -316,6 +419,7 @@ function createWindow() {
     trackedWebContents.add(webContentsId);
     ensureWebRequestHandlers();
     attachHistoryTracking(webContentsId);
+    attachConsoleTracking(webContentsId);
   });
 
   ipcMain.handle("history:add", async (_event, url, title) => {
@@ -410,6 +514,35 @@ function createWindow() {
         body: text,
       };
     } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("console:export", async (_event, entries) => {
+    try {
+      console.log("console:export requested", {
+        count: Array.isArray(entries) ? entries.length : 0,
+      });
+      const windowRef = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+      const dialogOptions = {
+        title: "Export Console Logs",
+        defaultPath: buildDefaultConsoleExportFilename(new Date()),
+        filters: [{ name: "Text Files", extensions: ["txt"] }],
+      };
+      const result = windowRef
+        ? await dialog.showSaveDialog(windowRef, dialogOptions)
+        : await dialog.showSaveDialog(dialogOptions);
+
+      if (result.canceled || !result.filePath) {
+        return { ok: false, canceled: true };
+      }
+
+      const text = buildConsoleExportText(entries);
+      fs.writeFileSync(result.filePath, text, "utf-8");
+      console.log("console:export success", { filePath: result.filePath });
+      return { ok: true, filePath: result.filePath };
+    } catch (error) {
+      console.error("Failed to export console logs:", error);
       return { ok: false, error: error?.message || String(error) };
     }
   });
@@ -633,12 +766,18 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   try {
+    console.log("Electron app ready; initializing database...");
     await initDatabase();
+    console.log("Database initialized; creating window...");
     createWindow();
   } catch (error) {
     console.error("Failed to initialize SQLite database:", error);
     app.quit();
   }
+});
+
+app.on("child-process-gone", (_event, details) => {
+  console.error("Electron child process gone:", details);
 });
 
 app.on("window-all-closed", () => {

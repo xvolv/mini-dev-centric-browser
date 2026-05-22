@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('network:event', listener);
         return () => ipcRenderer.removeListener('network:event', listener);
     },
+    onConsoleEvent: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('console:event', listener);
+        return () => ipcRenderer.removeListener('console:event', listener);
+    },
     selectRepo: () => ipcRenderer.invoke('git:selectRepo'),
     gitStatus: (repoPath) => ipcRenderer.invoke('git:status', repoPath),
     gitBranches: (repoPath) => ipcRenderer.invoke('git:branches', repoPath),
@@ -32,6 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     aiGetSettings: () => ipcRenderer.invoke('ai:getSettings'),
     aiSetSettings: (settings) => ipcRenderer.invoke('ai:setSettings', settings),
     apiSend: (payload) => ipcRenderer.invoke('api:send', payload),
+    exportConsoleLogs: (entries) => ipcRenderer.invoke('console:export', entries),
     webviewPreloadPath: path.join(__dirname, 'webview-preload.js'),
 });
 

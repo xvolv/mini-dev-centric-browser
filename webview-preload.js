@@ -76,6 +76,44 @@ const sendSelection = () => {
   ipcRenderer.sendToHost("selection-change", payload);
 };
 
+const sendPageError = (payload) => {
+  try {
+    ipcRenderer.sendToHost("page-error", payload);
+  } catch {
+    // ignore capture errors
+  }
+};
+
+window.addEventListener("error", (event) => {
+  sendPageError({
+    type: "error",
+    message: event?.message || "Uncaught error",
+    sourceId: event?.filename || event?.source || "",
+    line: Number.isFinite(event?.lineno) ? event.lineno : 0,
+    column: Number.isFinite(event?.colno) ? event.colno : 0,
+    stack: event?.error?.stack || "",
+    capturedAt: Date.now(),
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event?.reason;
+  const message =
+    typeof reason === "string"
+      ? reason
+      : reason?.message || "Unhandled promise rejection";
+
+  sendPageError({
+    type: "error",
+    message,
+    sourceId: "unhandledrejection",
+    line: 0,
+    column: 0,
+    stack: reason?.stack || "",
+    capturedAt: Date.now(),
+  });
+});
+
 const scheduleSelection = () => {
   if (pendingTimer) {
     clearTimeout(pendingTimer);

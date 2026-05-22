@@ -149,6 +149,19 @@ export default function MultiPaneView({
         if (event.channel === "api-request") {
           const payload = event.args?.[0] || {};
           onApiRequest?.(payload);
+          return;
+        }
+
+        if (event.channel === "page-error") {
+          const payload = event.args?.[0] || {};
+          onConsoleMessage?.({
+            level: 2,
+            message: payload.message || "Page error",
+            line: payload.line || 0,
+            sourceId: payload.sourceId || "",
+            stack: payload.stack || "",
+            timestamp: payload.capturedAt || Date.now(),
+          });
         }
       });
     }

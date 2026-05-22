@@ -8,6 +8,7 @@ export default function ConsolePanel({ entries = [], onClear }) {
   const [explainingId, setExplainingId] = useState(null);
   const [explainText, setExplainText] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const typeIcons = { log: "●", warn: "⚠", error: "✕", info: "ℹ" };
 
@@ -30,6 +31,26 @@ export default function ConsolePanel({ entries = [], onClear }) {
         return true;
       }),
     [entries, filter, search],
+  );
+
+  const exportableEntries = useMemo(
+    () =>
+      entries.map((entry) => ({
+        type: entry?.type || "log",
+        text: String(entry?.text || ""),
+        time: String(entry?.time || ""),
+        timestamp:
+          typeof entry?.timestamp === "number" && Number.isFinite(entry.timestamp)
+            ? entry.timestamp
+            : Date.now(),
+        sourceId: String(entry?.sourceId || ""),
+        line:
+          typeof entry?.line === "number" && Number.isFinite(entry.line)
+            ? entry.line
+            : 0,
+        stack: String(entry?.stack || ""),
+      })),
+    [entries],
   );
 
   const handleExplain = async (msg, id) => {
@@ -75,6 +96,27 @@ export default function ConsolePanel({ entries = [], onClear }) {
     }
   };
 
+  const handleExportLogs = async () => {
+    try {
+      setExporting(true);
+      console.log("Exporting console logs", { count: exportableEntries.length });
+      const exportFn =
+        window.electronAPI?.exportConsoleLogs || window.api?.exportConsoleLogs;
+      const result = await exportFn?.(exportableEntries);
+      if (result?.canceled) return;
+      if (!result?.ok) {
+        throw new Error(result?.error || "Failed to export console logs.");
+      }
+    } catch (error) {
+      console.error("Export logs failed:", error);
+      window.alert?.(
+        error?.message || String(error) || "Failed to export console logs.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="tool-panel">
       <div className="console__filters">
@@ -95,6 +137,14 @@ export default function ConsolePanel({ entries = [], onClear }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <button
+          className="btn-icon"
+          title="Export logs"
+          onClick={handleExportLogs}
+          disabled={exporting || entries.length === 0}
+        >
+          {exporting ? "⏳" : "⬇"}
+        </button>
         <button className="btn-icon" title="Clear" onClick={onClear}>
           🗑
         </button>

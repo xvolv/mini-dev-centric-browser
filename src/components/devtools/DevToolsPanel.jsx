@@ -110,13 +110,6 @@ export default function DevToolsPanel({
 
   return (
     <div className="devtools-panel" style={{ width: panelWidth }}>
-      <button
-        className="devtools-panel__close"
-        onClick={() => onClose?.()}
-        aria-label="Close DevTools"
-      >
-        ×
-      </button>
       <div
         className="devtools-panel__resize"
         onPointerDown={handlePointerDown}
