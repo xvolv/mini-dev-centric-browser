@@ -396,7 +396,9 @@ export default function App() {
 
       try {
         await window.api?.removeBookmark?.(bookmark.id);
-        setBookmarks((prev) => prev.filter((entry) => entry.id !== bookmark.id));
+        setBookmarks((prev) =>
+          prev.filter((entry) => entry.id !== bookmark.id),
+        );
         refreshBookmarks();
       } catch (error) {
         console.error("Failed to remove bookmark:", error);

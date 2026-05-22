@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Download, Loader2 } from "lucide-react";
 
 const DEFAULT_MODEL = "llama-3.1-8b-instant";
 
@@ -26,8 +27,9 @@ export default function ConsolePanel({ entries = [], onClear }) {
     () =>
       entries.filter((m) => {
         if (filter !== "all" && m.type !== filter) return false;
-        if (search && !m.text.toLowerCase().includes(search.toLowerCase()))
+        if (search && !m.text.toLowerCase().includes(search.toLowerCase())) {
           return false;
+        }
         return true;
       }),
     [entries, filter, search],
@@ -99,7 +101,9 @@ export default function ConsolePanel({ entries = [], onClear }) {
   const handleExportLogs = async () => {
     try {
       setExporting(true);
-      console.log("Exporting console logs", { count: exportableEntries.length });
+      console.log("Exporting console logs", {
+        count: exportableEntries.length,
+      });
       const exportFn =
         window.electronAPI?.exportConsoleLogs || window.api?.exportConsoleLogs;
       const result = await exportFn?.(exportableEntries);
@@ -120,14 +124,18 @@ export default function ConsolePanel({ entries = [], onClear }) {
   return (
     <div className="tool-panel">
       <div className="console__filters">
-        {["all", "log", "warn", "error", "info"].map((f) => (
+        {['all', 'log', 'warn', 'error', 'info'].map((f) => (
           <button
             key={f}
             className={`console__filter-btn ${filter === f ? "console__filter-btn--active" : ""}`}
             onClick={() => setFilter(f)}
           >
-            {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
-            {f !== "all" && <span> ({counts[f] || 0})</span>}
+            <span className="console__filter-label">
+              {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+            </span>
+            {f !== "all" && (
+              <span className="console__filter-count">{counts[f] || 0}</span>
+            )}
           </button>
         ))}
         <input
@@ -137,17 +145,19 @@ export default function ConsolePanel({ entries = [], onClear }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <button
-          className="btn-icon"
-          title="Export logs"
-          onClick={handleExportLogs}
-          disabled={exporting || entries.length === 0}
-        >
-          {exporting ? "⏳" : "⬇"}
-        </button>
-        <button className="btn-icon" title="Clear" onClick={onClear}>
-          🗑
-        </button>
+        <div className="console__actions">
+          <button
+            className="btn-icon"
+            title="Export logs"
+            onClick={handleExportLogs}
+            disabled={exporting || entries.length === 0}
+          >
+            {exporting ? <Loader2 className="animate-spin" /> : <Download height={12} />}
+          </button>
+          <button className="btn-icon" title="Clear" onClick={onClear}>
+            🗑
+          </button>
+        </div>
       </div>
       <div className="console__messages">
         {filtered.map((msg, i) => {
@@ -169,7 +179,7 @@ export default function ConsolePanel({ entries = [], onClear }) {
                     onClick={() => handleExplain(msg, id)}
                     title="Explain with AI"
                   >
-                    Explain{" "}
+                    Explain {" "}
                   </button>
                 )}
               </div>

@@ -28,7 +28,9 @@ export default function MultiPaneView({
 
   const shouldFallbackToSearch = (errorCode, validatedURL) => {
     const url = String(validatedURL || "");
-    return errorCode === -105 && !url.startsWith("https://www.google.com/search?q=");
+    return (
+      errorCode === -105 && !url.startsWith("https://www.google.com/search?q=")
+    );
   };
 
   const resolveFaviconUrl = (candidate, pageUrl) => {
@@ -176,7 +178,9 @@ export default function MultiPaneView({
             // Ignore aborted navigations (ERR_ABORTED / -3)
             if (errorCode === -3) return;
             if (!shouldFallbackToSearch(errorCode, validatedURL)) return;
-            const fallbackUrl = buildSearchUrl(validatedURL || el.getURL?.() || "");
+            const fallbackUrl = buildSearchUrl(
+              validatedURL || el.getURL?.() || "",
+            );
             try {
               el.setAttribute("src", fallbackUrl);
             } catch {

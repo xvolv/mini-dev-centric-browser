@@ -43,7 +43,9 @@ export default function BrowserView({
 
   const shouldFallbackToSearch = (errorCode, validatedURL) => {
     const url = String(validatedURL || "");
-    return errorCode === -105 && !url.startsWith("https://www.google.com/search?q=");
+    return (
+      errorCode === -105 && !url.startsWith("https://www.google.com/search?q=")
+    );
   };
 
   const resolveFaviconUrl = (candidate, pageUrl) => {
@@ -198,7 +200,9 @@ export default function BrowserView({
             // a navigation is cancelled by another navigation or redirect.
             if (errorCode === -3) return;
             if (!shouldFallbackToSearch(errorCode, validatedURL)) return;
-            const fallbackUrl = buildSearchUrl(validatedURL || el.getURL?.() || "");
+            const fallbackUrl = buildSearchUrl(
+              validatedURL || el.getURL?.() || "",
+            );
             onUrlUpdate?.(tabId, fallbackUrl);
             onTitleUpdate?.("Search");
           } catch (err) {
@@ -318,10 +322,18 @@ export default function BrowserView({
       updateNavState();
       setSelectionInfo(null);
     };
-    const handleFailLoad = (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+    const handleFailLoad = (
+      _event,
+      errorCode,
+      _errorDescription,
+      validatedURL,
+      isMainFrame,
+    ) => {
       if (!isMainFrame) return;
       if (!shouldFallbackToSearch(errorCode, validatedURL)) return;
-      const fallbackUrl = buildSearchUrl(validatedURL || webview.getURL?.() || "");
+      const fallbackUrl = buildSearchUrl(
+        validatedURL || webview.getURL?.() || "",
+      );
       onUrlUpdate?.(fallbackUrl);
       onTitleUpdate?.("Search");
     };
@@ -357,7 +369,10 @@ export default function BrowserView({
       webview.removeEventListener("did-navigate", handleNavigate);
       webview.removeEventListener("did-navigate-in-page", handleNavigate);
       webview.removeEventListener("did-navigate", handleNavigateFavicon);
-      webview.removeEventListener("did-navigate-in-page", handleNavigateFavicon);
+      webview.removeEventListener(
+        "did-navigate-in-page",
+        handleNavigateFavicon,
+      );
       timeouts.forEach((id) => clearTimeout(id));
     };
   }, [

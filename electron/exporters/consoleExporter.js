@@ -7,7 +7,10 @@ const formatDateTimeForFilename = (date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}`;
 
 const resolveTimestamp = (entry) => {
-  if (typeof entry?.timestamp === "number" && Number.isFinite(entry.timestamp)) {
+  if (
+    typeof entry?.timestamp === "number" &&
+    Number.isFinite(entry.timestamp)
+  ) {
     return entry.timestamp;
   }
   if (typeof entry?.time === "string") {
@@ -17,7 +20,10 @@ const resolveTimestamp = (entry) => {
   return Date.now();
 };
 
-const normalizeText = (value) => String(value ?? "").replace(/\r\n/g, "\n").trimEnd();
+const normalizeText = (value) =>
+  String(value ?? "")
+    .replace(/\r\n/g, "\n")
+    .trimEnd();
 
 const formatSource = (entry) => {
   const sourceId = String(entry?.sourceId || "").trim();
@@ -42,7 +48,12 @@ const formatEntry = (entry) => {
   const source = formatSource(entry);
   const stack = normalizeText(entry?.stack || entry?.stackTrace || "");
 
-  const lines = ["----------------------------------------", "", `[${type}]`, `Time: ${clock}`];
+  const lines = [
+    "----------------------------------------",
+    "",
+    `[${type}]`,
+    `Time: ${clock}`,
+  ];
   lines.push(`Timestamp: ${time}`);
   if (source) lines.push(`Source: ${source}`);
   lines.push("Message:");

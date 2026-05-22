@@ -16,7 +16,14 @@ const path = require("path");
 const simpleGit = require("simple-git");
 require("dotenv").config();
 const { initDatabase, closeDatabase } = require("./electron/database/db");
-const { addHistory, getHistory, removeHistory, addBookmark, getBookmarks, removeBookmark } = require("./electron/database/history");
+const {
+  addHistory,
+  getHistory,
+  removeHistory,
+  addBookmark,
+  getBookmarks,
+  removeBookmark,
+} = require("./electron/database/history");
 const {
   buildConsoleExportText,
   buildDefaultConsoleExportFilename,
@@ -246,7 +253,10 @@ app.on("web-contents-created", (_event, contents) => {
           // Ignore aborted navigations (ERR_ABORTED / -3)
           if (errorCode === -3) return;
           // For other errors, log at warn level but don't throw
-          console.warn("webContents did-fail-load", { errorCode, validatedURL });
+          console.warn("webContents did-fail-load", {
+            errorCode,
+            validatedURL,
+          });
         } catch (err) {
           // swallow any unexpected errors in handler
         }
@@ -330,14 +340,17 @@ function createWindow() {
     console.log("Main window closed");
   });
 
-  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-    console.error("Main window did-fail-load:", {
-      errorCode,
-      errorDescription,
-      validatedURL,
-      isMainFrame,
-    });
-  });
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      console.error("Main window did-fail-load:", {
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame,
+      });
+    },
+  );
 
   mainWindow.webContents.on("did-start-loading", () => {
     console.log("Main window did-start-loading");
@@ -397,9 +410,11 @@ function createWindow() {
       console.error("Failed to load dev URL:", error);
     });
   } else {
-    mainWindow.loadFile(path.join(__dirname, "dist", "index.html")).catch((error) => {
-      console.error("Failed to load production file:", error);
-    });
+    mainWindow
+      .loadFile(path.join(__dirname, "dist", "index.html"))
+      .catch((error) => {
+        console.error("Failed to load production file:", error);
+      });
   }
 
   // Window control IPC handlers
@@ -431,54 +446,54 @@ function createWindow() {
     }
   });
 
-   ipcMain.handle("history:search", async (_event, query) => {
-     try {
-       return getHistory(query);
-     } catch (error) {
-       console.error("Failed to search browsing history:", error);
-       return [];
-     }
-   });
+  ipcMain.handle("history:search", async (_event, query) => {
+    try {
+      return getHistory(query);
+    } catch (error) {
+      console.error("Failed to search browsing history:", error);
+      return [];
+    }
+  });
 
-   ipcMain.handle("history:remove", async (_event, id) => {
-     try {
-       removeHistory(id);
-       return { ok: true };
-     } catch (error) {
-       console.error("Failed to remove history entry:", error);
-       return { ok: false, error: error?.message || String(error) };
-     }
-   });
+  ipcMain.handle("history:remove", async (_event, id) => {
+    try {
+      removeHistory(id);
+      return { ok: true };
+    } catch (error) {
+      console.error("Failed to remove history entry:", error);
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
 
-   // Bookmark IPC handlers
-   ipcMain.handle("bookmark:add", async (_event, url, title) => {
-     try {
-       addBookmark(url, title);
-       return { ok: true };
-     } catch (error) {
-       console.error("Failed to add bookmark:", error);
-       return { ok: false, error: error?.message || String(error) };
-     }
-   });
+  // Bookmark IPC handlers
+  ipcMain.handle("bookmark:add", async (_event, url, title) => {
+    try {
+      addBookmark(url, title);
+      return { ok: true };
+    } catch (error) {
+      console.error("Failed to add bookmark:", error);
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
 
-   ipcMain.handle("bookmark:get", async (_event) => {
-     try {
-       return getBookmarks();
-     } catch (error) {
-       console.error("Failed to get bookmarks:", error);
-       return [];
-     }
-   });
+  ipcMain.handle("bookmark:get", async (_event) => {
+    try {
+      return getBookmarks();
+    } catch (error) {
+      console.error("Failed to get bookmarks:", error);
+      return [];
+    }
+  });
 
-   ipcMain.handle("bookmark:remove", async (_event, id) => {
-     try {
-       removeBookmark(id);
-       return { ok: true };
-     } catch (error) {
-       console.error("Failed to remove bookmark:", error);
-       return { ok: false, error: error?.message || String(error) };
-     }
-   });
+  ipcMain.handle("bookmark:remove", async (_event, id) => {
+    try {
+      removeBookmark(id);
+      return { ok: true };
+    } catch (error) {
+      console.error("Failed to remove bookmark:", error);
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
 
   ipcMain.handle("api:send", async (_event, payload) => {
     try {
@@ -523,7 +538,8 @@ function createWindow() {
       console.log("console:export requested", {
         count: Array.isArray(entries) ? entries.length : 0,
       });
-      const windowRef = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+      const windowRef =
+        mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
       const dialogOptions = {
         title: "Export Console Logs",
         defaultPath: buildDefaultConsoleExportFilename(new Date()),

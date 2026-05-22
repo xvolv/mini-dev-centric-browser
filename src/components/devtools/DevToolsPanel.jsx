@@ -30,10 +30,11 @@ export default function DevToolsPanel({
   onDevToolsApiRequest,
   onClose,
 }) {
-  const [panelWidth, setPanelWidth] = useState(420);
+  const MIN_PANEL_WIDTH = 520;
+  const [panelWidth, setPanelWidth] = useState(520);
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
-  const dragStartWidth = useRef(420);
+  const dragStartWidth = useRef(520);
   const activePointerId = useRef(null);
   const maxPanelWidth = () => window.innerWidth * 0.5;
 
@@ -49,10 +50,11 @@ export default function DevToolsPanel({
   };
 
   const handlePointerMove = (event) => {
-    if (!isResizing.current || event.pointerId !== activePointerId.current) return;
+    if (!isResizing.current || event.pointerId !== activePointerId.current)
+      return;
     const delta = dragStartX.current - event.clientX;
     const nextWidth = dragStartWidth.current + delta;
-    setPanelWidth(Math.max(360, Math.min(nextWidth, maxPanelWidth())));
+    setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(nextWidth, maxPanelWidth())));
   };
 
   const handlePointerUp = () => {
@@ -62,51 +64,51 @@ export default function DevToolsPanel({
     document.body.style.userSelect = "";
   };
 
-    const renderContent = () => {
-      switch (activeTool) {
-        case "console":
-          return (
-            <ConsolePanel entries={consoleEntries} onClear={onClearConsole} />
-          );
-        case "network":
-          return (
-            <NetworkPanel entries={networkEntries} onClear={onClearNetwork} />
-          );
-        case "api":
-          return <ApiTesterPanel latestRequest={latestApiRequest} />;
-        case "sandbox":
-          return <SandboxPanel />;
-        case "device":
-          return (
-            <DeviceSimPanel
-              value={deviceSim}
-              onChange={onDeviceSimChange}
-              url={activeTabUrl}
-              activeTabId={activeTabId}
-              onWebviewReady={onDevToolsWebviewReady}
-              onConsoleMessage={onDevToolsConsoleMessage}
-              onApiRequest={onDevToolsApiRequest}
-            />
-          );
-        case "ai":
-          return (
-            <AiAssistantPanel
-              activeTabTitle={activeTabTitle}
-              activeTabHtml={activeTabHtml}
-              activeTabHtmlUpdatedAt={activeTabHtmlUpdatedAt}
-              aiDraft={aiDraft}
-            />
-          );
-        case "git":
-          return <GitPanel />;
-        case "workspace":
-          return <WorkspacePanel />;
-        case "settings":
-          return <SettingsPanel />;
-        default:
-          return null;
-      }
-    };
+  const renderContent = () => {
+    switch (activeTool) {
+      case "console":
+        return (
+          <ConsolePanel entries={consoleEntries} onClear={onClearConsole} />
+        );
+      case "network":
+        return (
+          <NetworkPanel entries={networkEntries} onClear={onClearNetwork} />
+        );
+      case "api":
+        return <ApiTesterPanel latestRequest={latestApiRequest} />;
+      case "sandbox":
+        return <SandboxPanel />;
+      case "device":
+        return (
+          <DeviceSimPanel
+            value={deviceSim}
+            onChange={onDeviceSimChange}
+            url={activeTabUrl}
+            activeTabId={activeTabId}
+            onWebviewReady={onDevToolsWebviewReady}
+            onConsoleMessage={onDevToolsConsoleMessage}
+            onApiRequest={onDevToolsApiRequest}
+          />
+        );
+      case "ai":
+        return (
+          <AiAssistantPanel
+            activeTabTitle={activeTabTitle}
+            activeTabHtml={activeTabHtml}
+            activeTabHtmlUpdatedAt={activeTabHtmlUpdatedAt}
+            aiDraft={aiDraft}
+          />
+        );
+      case "git":
+        return <GitPanel />;
+      case "workspace":
+        return <WorkspacePanel />;
+      case "settings":
+        return <SettingsPanel />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="devtools-panel" style={{ width: panelWidth }}>

@@ -132,7 +132,9 @@ export default function AddressBar({
       };
       onRegisterFocus(registerFocusRef.current);
     }
-    return () => { if (onRegisterFocus) onRegisterFocus(null); };
+    return () => {
+      if (onRegisterFocus) onRegisterFocus(null);
+    };
   }, [onRegisterFocus]);
 
   useEffect(() => {
@@ -193,7 +195,10 @@ export default function AddressBar({
       const candNorm = normalize(candidate);
 
       // Only autofill when the normalized suggestion starts with the normalized raw text
-      if (candNorm.toLowerCase().startsWith(rawNorm.toLowerCase()) && candNorm !== rawNorm) {
+      if (
+        candNorm.toLowerCase().startsWith(rawNorm.toLowerCase()) &&
+        candNorm !== rawNorm
+      ) {
         // Show the autofill using the normalized form (no protocol), select the suffix
         clearingRef.current = false;
         searchBlockedRef.current = true;
@@ -359,7 +364,12 @@ export default function AddressBar({
     if (event.key === "ArrowRight") {
       try {
         const el = inputRef.current;
-        if (el && el.selectionStart != null && el.selectionEnd != null && el.selectionEnd > el.selectionStart) {
+        if (
+          el &&
+          el.selectionStart != null &&
+          el.selectionEnd != null &&
+          el.selectionEnd > el.selectionStart
+        ) {
           event.preventDefault();
           // if user hasn't selected a suggestion in the list, accept top suggestion
           if (activeIndex === -1 && suggestions && suggestions.length > 0) {
@@ -481,7 +491,7 @@ export default function AddressBar({
               <button
                 key={suggestion.id}
                 type="button"
-                className={`addressbar__suggestion ${idx === activeIndex ? 'addressbar__suggestion--active' : ''}`}
+                className={`addressbar__suggestion ${idx === activeIndex ? "addressbar__suggestion--active" : ""}`}
                 onMouseEnter={() => setActiveIndex(idx)}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -504,8 +514,24 @@ export default function AddressBar({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    <line
+                      x1="2"
+                      y1="2"
+                      x2="10"
+                      y2="10"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1="10"
+                      y1="2"
+                      x2="2"
+                      y2="10"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 </div>
               </button>

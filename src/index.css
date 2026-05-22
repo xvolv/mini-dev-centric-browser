@@ -63,7 +63,7 @@
   --toolbar-height: calc(
     var(--titlebar-height) + var(--tabbar-height) + var(--addressbar-height)
   );
-  --devtools-min-width: 360px;
+  --devtools-min-width: 520px;
   --panel-tab-height: 36px;
 
   /* Transitions */
@@ -419,24 +419,24 @@ body,
     border-color var(--transition-fast);
 }
 
-  .bookmarks-bar__remove {
-    width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 2px;
-    border-radius: var(--radius-round);
-    color: var(--text-muted);
-    line-height: 1;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
+.bookmarks-bar__remove {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  border-radius: var(--radius-round);
+  color: var(--text-muted);
+  line-height: 1;
+  font-size: 14px;
+  flex-shrink: 0;
+}
 
-  .bookmarks-bar__item:hover .bookmarks-bar__remove {
-    color: var(--text-primary);
-    background: var(--bg-active);
-  }
+.bookmarks-bar__item:hover .bookmarks-bar__remove {
+  color: var(--text-primary);
+  background: var(--bg-active);
+}
 
 .bookmarks-bar__item:hover {
   background: var(--bg-hover);
@@ -760,7 +760,9 @@ body,
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .addressbar__suggestion-remove:hover {
@@ -1193,18 +1195,29 @@ body,
   gap: 4px;
   padding: 6px 12px;
   border-bottom: 1px solid var(--border-muted);
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .console__filter-btn {
-  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  background: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0)
+  );
   color: var(--text-muted);
   cursor: pointer;
   font-size: var(--font-xs);
   font-family: var(--font-family);
   transition: all var(--transition-fast);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .console__filter-btn:hover {
@@ -1218,8 +1231,35 @@ body,
   border-color: var(--border-default);
 }
 
+.console__filter-label {
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.console__filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  height: 1.4em;
+  padding: 0 0.45em;
+  border-radius: var(--radius-round);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.console__filter-btn--active .console__filter-count {
+  background: rgba(88, 166, 255, 0.14);
+  border-color: rgba(88, 166, 255, 0.24);
+  color: var(--text-primary);
+}
+
 .console__search {
-  flex: 1;
+  flex: 1 1 180px;
+  min-width: 90px;
   height: 24px;
   padding: 0 8px;
   background: var(--bg-input);
@@ -1230,6 +1270,18 @@ body,
   font-family: var(--font-family);
   outline: none;
   margin-left: auto;
+}
+
+.console__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.console__actions .btn-icon {
+  flex: 0 0 auto;
 }
 
 .console__search:focus {
