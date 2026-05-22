@@ -667,11 +667,7 @@ export default function SandboxPanel() {
                   language={getEditorLanguage(activeTab)}
                   path={activeTab}
                   value={
-                    activeTab === "html"
-                      ? html
-                      : activeTab === "css"
-                        ? css
-                        : js
+                    activeTab === "html" ? html : activeTab === "css" ? css : js
                   }
                   onChange={(nextValue) => {
                     if (activeTab === "html") setHtml(nextValue ?? "");
@@ -681,7 +677,11 @@ export default function SandboxPanel() {
                     setStatusMessage("Rendering preview...");
                   }}
                   options={MONACO_OPTIONS}
-                  loading={<div style={{ padding: "1rem", color: "#8b949e" }}>Loading Editor...</div>}
+                  loading={
+                    <div style={{ padding: "1rem", color: "#8b949e" }}>
+                      Loading Editor...
+                    </div>
+                  }
                 />
               </div>
             </div>
