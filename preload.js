@@ -34,3 +34,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     apiSend: (payload) => ipcRenderer.invoke('api:send', payload),
     webviewPreloadPath: path.join(__dirname, 'webview-preload.js'),
 });
+
+contextBridge.exposeInMainWorld('api', {
+    addHistory: (url, title) => ipcRenderer.invoke('history:add', url, title),
+    searchHistory: (query) => ipcRenderer.invoke('history:search', query),
+    removeHistory: (id) => ipcRenderer.invoke('history:remove', id),
+    addBookmark: (url, title) => ipcRenderer.invoke('bookmark:add', url, title),
+    getBookmarks: () => ipcRenderer.invoke('bookmark:get'),
+    removeBookmark: (id) => ipcRenderer.invoke('bookmark:remove', id),
+});

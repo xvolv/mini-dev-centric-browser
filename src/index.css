@@ -308,6 +308,8 @@ body,
   height: 14px;
   border-radius: 2px;
   flex-shrink: 0;
+  object-fit: contain;
+  background: transparent;
 }
 
 .tab__title {
@@ -373,6 +375,87 @@ body,
   border-bottom: 1px solid var(--border-muted);
   padding: 0 8px;
   gap: 4px;
+  position: relative;
+  z-index: 20;
+  overflow: visible;
+}
+
+.bookmarks-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-muted);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.bookmarks-bar__list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min-content;
+}
+
+.bookmarks-bar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-round);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+  .bookmarks-bar__remove {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 2px;
+    border-radius: var(--radius-round);
+    color: var(--text-muted);
+    line-height: 1;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .bookmarks-bar__item:hover .bookmarks-bar__remove {
+    color: var(--text-primary);
+    background: var(--bg-active);
+  }
+
+.bookmarks-bar__item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.bookmarks-bar__icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.bookmarks-bar__title {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .addressbar__btn {
@@ -403,6 +486,7 @@ body,
 
 .addressbar__input-wrapper {
   flex: 1;
+  max-width: 55%;
   position: relative;
   display: flex;
   align-items: center;
@@ -428,6 +512,260 @@ body,
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
   background: var(--bg-input);
+}
+
+/* Bookmark button inside input field */
+.addressbar__bookmark-input-btn {
+  position: absolute;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-round);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.addressbar__bookmark-card {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(340px, calc(100vw - 24px));
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 40;
+}
+
+.addressbar__bookmark-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.addressbar__bookmark-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+}
+
+.addressbar__bookmark-card-meta {
+  min-width: 0;
+}
+
+.addressbar__bookmark-card-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.addressbar__bookmark-card-url {
+  margin-top: 2px;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.addressbar__bookmark-card-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.addressbar__bookmark-card-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-muted);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.addressbar__bookmark-card-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+}
+
+.addressbar__bookmark-card-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.addressbar__bookmark-card-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.addressbar__bookmark-card-btn--secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-muted);
+}
+
+.addressbar__bookmark-card-btn--primary {
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+/* Adjust input padding to accommodate the button */
+.addressbar__input {
+  padding-right: 36px; /* Space for the bookmark button */
+}
+
+.addressbar__input {
+  width: 100%;
+  height: 30px;
+  padding: 0 12px 0 32px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-round);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.addressbar__input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+  background: var(--bg-input);
+}
+
+/* Bookmark button inside input field */
+.addressbar__bookmark-input-btn {
+  position: absolute;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-round);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.addressbar__bookmark-input-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Adjust input padding to accommodate the button */
+.addressbar__input {
+  padding-right: 36px; /* Space for the bookmark button */
+}
+
+.addressbar__suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 12px;
+  right: 12px;
+  max-width: 680px;
+  z-index: 30;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.addressbar__suggestion {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-muted);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.addressbar__suggestion:last-child {
+  border-bottom: none;
+}
+
+.addressbar__suggestion:hover {
+  background: var(--bg-hover);
+}
+
+.addressbar__suggestion-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addressbar__suggestion-title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addressbar__suggestion-url {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addressbar__suggestion-remove {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.addressbar__suggestion-remove:hover {
+  background: var(--bg-danger-muted);
+  color: var(--danger);
 }
 
 .addressbar__lock {
@@ -684,6 +1022,23 @@ body,
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+.devtools-panel__resize {
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: col-resize;
+  z-index: 15;
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+}
+
+.devtools-panel__resize:hover {
+  background: rgba(88, 166, 255, 0.12);
 }
 
 .devtools-panel__close {

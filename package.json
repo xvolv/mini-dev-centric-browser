@@ -7,10 +7,13 @@
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build && electron-builder",
     "generate:icon": "node scripts/generate-ico.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "dotenv": "^16.4.5",
+    "lucide-react": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "simple-git": "^3.24.0"
@@ -20,6 +23,7 @@
     "concurrently": "^9.1.2",
     "electron": "^33.3.1",
     "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
     "sharp": "^0.33.5",
     "to-ico": "^1.1.5",
     "vite": "^6.1.0",
@@ -36,6 +40,7 @@
       "main.js",
       "preload.js",
       "webview-preload.js",
+      "electron/database/**",
       "assets/**",
       "package.json"
     ],

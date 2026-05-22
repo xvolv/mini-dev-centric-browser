@@ -6,12 +6,75 @@ export default function MultiPaneView({
   onWebviewReady,
   onConsoleMessage,
   onApiRequest,
+  onUrlFallback,
+  onFaviconUpdate,
 }) {
   const webviewRefs = useRef({});
   const containerRef = useRef(null);
   const [scales, setScales] = useState({});
   const [paneWidths, setPaneWidths] = useState({});
   const webviewPreload = window.electronAPI?.webviewPreloadPath;
+
+  const shouldIgnoreConsoleMessage = (message) => {
+    const text = String(message || "");
+    return (
+      text.includes("Electron Security Warning") ||
+      text.includes("Minified React error #418")
+    );
+  };
+
+  const buildSearchUrl = (value) =>
+    `https://www.google.com/search?q=${encodeURIComponent(String(value || "").trim())}`;
+
+  const shouldFallbackToSearch = (errorCode, validatedURL) => {
+    const url = String(validatedURL || "");
+    return errorCode === -105 && !url.startsWith("https://www.google.com/search?q=");
+  };
+
+  const resolveFaviconUrl = (candidate, pageUrl) => {
+    const value = String(candidate || "").trim();
+    if (!value) return "";
+    try {
+      return new URL(value, pageUrl || "").href;
+    } catch {
+      return "";
+    }
+  };
+
+  const collectFavicon = async (webview) => {
+    if (!onFaviconUpdate) return;
+    try {
+      const pageUrl = webview.getURL?.() || "";
+      const result = await webview.executeJavaScript(
+        `(() => {
+          const selectors = [
+            'link[rel~="icon"][href]',
+            'link[rel="shortcut icon"][href]',
+            'link[rel="apple-touch-icon"][href]',
+            'link[rel="mask-icon"][href]'
+          ];
+          const icons = Array.from(document.querySelectorAll(selectors.join(',')))
+            .map((link) => link.href || link.getAttribute('href'))
+            .filter(Boolean);
+          return { icons, pageUrl: location.href };
+        })()`,
+        true,
+      );
+
+      const icons = Array.isArray(result?.icons) ? result.icons : [];
+      const resolved = resolveFaviconUrl(icons[0], result?.pageUrl || pageUrl);
+      const fallback = pageUrl ? new URL("/favicon.ico", pageUrl).href : "";
+      onFaviconUpdate(resolved || fallback);
+    } catch {
+      const pageUrl = webview.getURL?.() || "";
+      if (!pageUrl) return;
+      try {
+        onFaviconUpdate(new URL("/favicon.ico", pageUrl).href);
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   // Default devices for multi-pane: mobile and laptop (two panes)
   const defaultDevices = [
@@ -69,6 +132,7 @@ export default function MultiPaneView({
     if (!el.__multiPaneConsoleAttached) {
       el.__multiPaneConsoleAttached = true;
       el.addEventListener("console-message", (event) => {
+        if (shouldIgnoreConsoleMessage(event.message)) return;
         onConsoleMessage?.({
           level: event.level,
           message: event.message,
@@ -89,6 +153,30 @@ export default function MultiPaneView({
       });
     }
 
+    if (!el.__multiPaneFailAttached) {
+      el.__multiPaneFailAttached = true;
+      el.addEventListener(
+        "did-fail-load",
+        (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+          try {
+            if (!isMainFrame) return;
+            // Ignore aborted navigations (ERR_ABORTED / -3)
+            if (errorCode === -3) return;
+            if (!shouldFallbackToSearch(errorCode, validatedURL)) return;
+            const fallbackUrl = buildSearchUrl(validatedURL || el.getURL?.() || "");
+            try {
+              el.setAttribute("src", fallbackUrl);
+            } catch {
+              el.src = fallbackUrl;
+            }
+            onUrlFallback?.(fallbackUrl);
+          } catch (err) {
+            console.warn("multi-pane did-fail-load handler error", err);
+          }
+        },
+      );
+    }
+
     // Notify parent when webview is ready
     if (!el.__multiPaneReady) {
       el.__multiPaneReady = true;
@@ -97,7 +185,23 @@ export default function MultiPaneView({
         if (typeof webContentsId === "number") {
           onWebviewReady?.(webContentsId, el);
         }
+        collectFavicon(el);
       });
+    }
+
+    if (!el.__multiPaneFaviconAttached) {
+      el.__multiPaneFaviconAttached = true;
+      el.addEventListener("page-favicon-updated", (event) => {
+        const favicon = Array.isArray(event?.favicons)
+          ? event.favicons.find((item) => typeof item === "string" && item)
+          : "";
+        if (favicon) {
+          onFaviconUpdate?.(favicon);
+        }
+      });
+      el.addEventListener("did-finish-load", () => collectFavicon(el));
+      el.addEventListener("did-navigate", () => collectFavicon(el));
+      el.addEventListener("did-navigate-in-page", () => collectFavicon(el));
     }
   };
 

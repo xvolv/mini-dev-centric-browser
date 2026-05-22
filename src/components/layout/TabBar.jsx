@@ -1,5 +1,36 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
+const DEFAULT_TAB_ICON =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="#8b949e" stroke-width="1.2"/>
+      <path d="M1.8 8h12.4" stroke="#8b949e" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M8 1.5c2 2 2 11 0 13" stroke="#8b949e" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M8 1.5c-2 2-2 11 0 13" stroke="#8b949e" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+  `);
+
+function TabFavicon({ src, title }) {
+  const safeSrc = src || DEFAULT_TAB_ICON;
+
+  return (
+    <img
+      className="tab__favicon"
+      src={safeSrc}
+      alt=""
+      aria-hidden="true"
+      onError={(event) => {
+        const target = event.currentTarget;
+        if (target.dataset.fallbackApplied === "1") return;
+        target.dataset.fallbackApplied = "1";
+        target.src = DEFAULT_TAB_ICON;
+      }}
+      title={title}
+    />
+  );
+}
+
 export default function TabBar({
   tabs,
   activeTabId,
@@ -7,7 +38,7 @@ export default function TabBar({
   onCloseTab,
   onNewTab,
 }) {
-  const reservedRightGutter = 132;
+  const reservedRightGutter = 40;
   const containerRef = useRef(null);
   const newTabRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -37,11 +68,11 @@ export default function TabBar({
       };
     }
 
-    const maxWidth = 220;
-    const minWidth = 100;
-    const minVisibleWhenStacked = 34;
-    const rightSpacing = 10;
-    const fallbackNewTabWidth = 34;
+  const maxWidth = 160;
+  const minWidth = 60;
+  const minVisibleWhenStacked = 20;
+  const rightSpacing = 6;
+  const fallbackNewTabWidth = 28;
     const newTabWidth = newTabRef.current?.offsetWidth || fallbackNewTabWidth;
     const available = Math.max(
       0,
@@ -114,6 +145,7 @@ export default function TabBar({
               zIndex: tab.id === activeTabId ? tabs.length + 2 : index + 1,
             }}
           >
+            <TabFavicon src={tab.favicon} title={tab.title || "New Tab"} />
             <span className="tab__title">{tab.title || "New Tab"}</span>
             <button
               className="tab__close"

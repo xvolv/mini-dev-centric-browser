@@ -7,6 +7,7 @@ export default function BrowserView({
   activeTabId,
   onTitleUpdate,
   onUrlUpdate,
+  onFaviconUpdate,
   onNavStateChange,
   onWebviewReady,
   onConsoleMessage,
@@ -28,6 +29,67 @@ export default function BrowserView({
     () => tabs.filter((tab) => Boolean(tab.url)),
     [tabs],
   );
+
+  const shouldIgnoreConsoleMessage = (message) => {
+    const text = String(message || "");
+    return (
+      text.includes("Electron Security Warning") ||
+      text.includes("Minified React error #418")
+    );
+  };
+
+  const buildSearchUrl = (value) =>
+    `https://www.google.com/search?q=${encodeURIComponent(String(value || "").trim())}`;
+
+  const shouldFallbackToSearch = (errorCode, validatedURL) => {
+    const url = String(validatedURL || "");
+    return errorCode === -105 && !url.startsWith("https://www.google.com/search?q=");
+  };
+
+  const resolveFaviconUrl = (candidate, pageUrl) => {
+    const value = String(candidate || "").trim();
+    if (!value) return "";
+    try {
+      return new URL(value, pageUrl || "").href;
+    } catch {
+      return "";
+    }
+  };
+
+  const collectFavicon = async (webview, tabId) => {
+    if (!onFaviconUpdate) return;
+    try {
+      const pageUrl = webview.getURL?.() || "";
+      const result = await webview.executeJavaScript(
+        `(() => {
+          const selectors = [
+            'link[rel~="icon"][href]',
+            'link[rel="shortcut icon"][href]',
+            'link[rel="apple-touch-icon"][href]',
+            'link[rel="mask-icon"][href]'
+          ];
+          const icons = Array.from(document.querySelectorAll(selectors.join(',')))
+            .map((link) => link.href || link.getAttribute('href'))
+            .filter(Boolean);
+          return { icons, pageUrl: location.href };
+        })()`,
+        true,
+      );
+
+      const icons = Array.isArray(result?.icons) ? result.icons : [];
+      const resolved = resolveFaviconUrl(icons[0], result?.pageUrl || pageUrl);
+      const fallback = pageUrl ? new URL("/favicon.ico", pageUrl).href : "";
+      onFaviconUpdate(tabId, resolved || fallback);
+    } catch {
+      const pageUrl = webview.getURL?.() || "";
+      if (!pageUrl) return;
+      try {
+        onFaviconUpdate(tabId, new URL("/favicon.ico", pageUrl).href);
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   const viewport = useMemo(() => {
     if (!deviceSim?.enabled || deviceSim?.multiPane) return null;
@@ -63,6 +125,7 @@ export default function BrowserView({
     if (!el.__devcentricConsoleAttached) {
       el.__devcentricConsoleAttached = true;
       el.addEventListener("console-message", (event) => {
+        if (shouldIgnoreConsoleMessage(event.message)) return;
         onConsoleMessage?.(tabId, {
           level: event.level,
           message: event.message,
@@ -96,6 +159,40 @@ export default function BrowserView({
           onApiRequest?.(tabId, payload);
         }
       });
+    }
+
+    if (!el.__devcentricFaviconAttached) {
+      el.__devcentricFaviconAttached = true;
+      el.addEventListener("page-favicon-updated", (event) => {
+        const favicon = Array.isArray(event?.favicons)
+          ? event.favicons.find((item) => typeof item === "string" && item)
+          : "";
+        if (favicon) {
+          onFaviconUpdate?.(tabId, favicon);
+        }
+      });
+    }
+
+    if (!el.__devcentricFailAttached) {
+      el.__devcentricFailAttached = true;
+      el.addEventListener(
+        "did-fail-load",
+        (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+          try {
+            if (!isMainFrame) return;
+            // Ignore aborted navigations (ERR_ABORTED) which are normal when
+            // a navigation is cancelled by another navigation or redirect.
+            if (errorCode === -3) return;
+            if (!shouldFallbackToSearch(errorCode, validatedURL)) return;
+            const fallbackUrl = buildSearchUrl(validatedURL || el.getURL?.() || "");
+            onUrlUpdate?.(tabId, fallbackUrl);
+            onTitleUpdate?.("Search");
+          } catch (err) {
+            // Swallow errors from the handler to avoid bubbling into Electron internals
+            console.warn("did-fail-load handler error", err);
+          }
+        },
+      );
     }
 
     if (!el.__devcentricReady) {
@@ -207,18 +304,33 @@ export default function BrowserView({
       updateNavState();
       setSelectionInfo(null);
     };
+    const handleFailLoad = (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+      if (!isMainFrame) return;
+      if (!shouldFallbackToSearch(errorCode, validatedURL)) return;
+      const fallbackUrl = buildSearchUrl(validatedURL || webview.getURL?.() || "");
+      onUrlUpdate?.(fallbackUrl);
+      onTitleUpdate?.("Search");
+    };
     const handleDomReady = () => {
       scheduleCapture(0);
       scheduleCapture(1500);
+      collectFavicon(webview, tabId);
     };
-    const handleFinish = () => scheduleCapture(0);
+    const handleFinish = () => {
+      scheduleCapture(0);
+      collectFavicon(webview, activeTabId);
+    };
+    const handleNavigateFavicon = () => collectFavicon(webview, activeTabId);
 
     webview.addEventListener("did-stop-loading", handleStop);
     webview.addEventListener("dom-ready", handleDomReady);
     webview.addEventListener("did-finish-load", handleFinish);
+    webview.addEventListener("did-fail-load", handleFailLoad);
     webview.addEventListener("page-title-updated", handleTitle);
     webview.addEventListener("did-navigate", handleNavigate);
     webview.addEventListener("did-navigate-in-page", handleNavigate);
+    webview.addEventListener("did-navigate", handleNavigateFavicon);
+    webview.addEventListener("did-navigate-in-page", handleNavigateFavicon);
 
     updateNavState();
 
@@ -226,9 +338,12 @@ export default function BrowserView({
       webview.removeEventListener("did-stop-loading", handleStop);
       webview.removeEventListener("dom-ready", handleDomReady);
       webview.removeEventListener("did-finish-load", handleFinish);
+      webview.removeEventListener("did-fail-load", handleFailLoad);
       webview.removeEventListener("page-title-updated", handleTitle);
       webview.removeEventListener("did-navigate", handleNavigate);
       webview.removeEventListener("did-navigate-in-page", handleNavigate);
+      webview.removeEventListener("did-navigate", handleNavigateFavicon);
+      webview.removeEventListener("did-navigate-in-page", handleNavigateFavicon);
       timeouts.forEach((id) => clearTimeout(id));
     };
   }, [
@@ -246,6 +361,12 @@ export default function BrowserView({
         {hasActiveUrl ? (
           <MultiPaneView
             url={activeTab.url}
+            onUrlFallback={(fallbackUrl) => {
+              onUrlUpdate?.(fallbackUrl);
+            }}
+            onFaviconUpdate={(favicon) => {
+              onFaviconUpdate?.(activeTab.id, favicon);
+            }}
             onWebviewReady={(webContentsId, webview) => {
               webviewRefs.current[activeTab.id] = webview;
               onWebviewReady?.(activeTab.id, webContentsId, webview);
