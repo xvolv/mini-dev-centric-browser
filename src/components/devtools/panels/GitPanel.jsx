@@ -193,13 +193,21 @@ export default function GitPanel() {
 
   const chooseCloneDir = async () => {
     const res = await window.electronAPI?.githubChooseCloneDir?.();
-    if (res?.ok) setCloneDir(res.path);
+    console.log('chooseCloneDir result:', res);
+    if (res?.ok) {
+      setCloneDir(res.path);
+      console.log('Set cloneDir to:', res.path);
+    } else {
+      setCloneDir("");
+      console.log('Failed to select folder or canceled.');
+    }
   };
 
   const pathSep = () =>
     window.navigator.platform.toLowerCase().includes("win") ? "\\" : "/";
 
   const handleClone = async (repo) => {
+    console.log('handleClone called with cloneDir:', cloneDir);
     if (!cloneDir) {
       setError("Choose a storage folder before cloning.");
       return;
@@ -208,10 +216,12 @@ export default function GitPanel() {
     setError("");
     try {
       const target = `${cloneDir}${cloneDir.endsWith("/") || cloneDir.endsWith("\\") ? "" : pathSep()}${repo.name}`;
+      console.log('Cloning to target:', target);
       const res = await window.electronAPI?.githubClone?.(
         repo.clone_url,
         target,
       );
+      console.log('Clone result:', res);
       if (!res?.ok) throw new Error(res?.error || "Clone failed.");
       setRepoPath(target);
       localStorage.setItem(STORAGE_KEY, target);
