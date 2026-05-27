@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react";
 import monacoEditorPlugin from "vite-plugin-monaco-editor";
 
 export default defineConfig({
-  plugins: [react(), monacoEditorPlugin()],
-  base: "./",
+  plugins: [react(), monacoEditorPlugin({})],
+  base: './',
   build: {
     outDir: "dist",
     emptyOutDir: true,
