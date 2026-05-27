@@ -946,7 +946,9 @@ function createWindow() {
     try {
       const git = await getRepoGit(repoPath);
       const status = await git.status();
-      return { ok: true, status };
+      // Ensure the status object is serializable
+      const serializableStatus = JSON.parse(JSON.stringify(status));
+      return { ok: true, status: serializableStatus };
     } catch (error) {
       return { ok: false, error: error?.message || String(error) };
     }
