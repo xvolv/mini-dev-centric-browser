@@ -302,6 +302,11 @@ export default function AiAssistantPanel({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+              return;
+            }
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
               e.preventDefault();
               handleSend();
