@@ -177,6 +177,7 @@ body,
   user-select: none;
   padding: 0 8px;
   gap: 8px;
+  position: relative;
 }
 
 .titlebar__logo {
@@ -199,6 +200,18 @@ body,
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.3px;
+}
+
+.titlebar__title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .titlebar__spacer {
@@ -3190,78 +3203,6 @@ body,
 
 .git-panel__commit-btn:hover {
   background: #37a348;
-}
-
-/* ===== WORKSPACE MANAGER ===== */
-.workspace__list {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.workspace__card {
-  padding: 12px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-muted);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.workspace__card:hover {
-  border-color: var(--accent-blue);
-  box-shadow: var(--shadow-glow);
-}
-
-.workspace__card-name {
-  font-size: var(--font-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.workspace__card-meta {
-  display: flex;
-  gap: 12px;
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-}
-
-.workspace__actions {
-  display: flex;
-  gap: 6px;
-  padding: 12px;
-  border-bottom: 1px solid var(--border-muted);
-}
-
-.workspace__action-btn {
-  flex: 1;
-  height: 30px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-xs);
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  font-family: var(--font-family);
-}
-
-.workspace__action-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.workspace__action-btn--primary {
-  background: var(--accent-blue);
-  color: #fff;
-  border-color: var(--accent-blue);
-}
-
-.workspace__action-btn--primary:hover {
-  background: #4c94e8;
 }
 
 /* ===== SETTINGS ===== */

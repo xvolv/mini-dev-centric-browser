@@ -6,7 +6,6 @@ import {
   Smartphone,
   Sparkles,
   GitBranch,
-  Grid3X3,
   Settings
 } from "lucide-react";
 
@@ -18,7 +17,6 @@ export const TOOLS = [
   { id: 'device', icon: Smartphone, label: 'Devices' },
   { id: 'ai', icon: Sparkles, label: 'AI Assist' },
   { id: 'git', icon: GitBranch, label: 'Git' },
-  { id: 'workspace', icon: Grid3X3, label: 'Workspace' },
   { id: 'settings', icon: Settings, label: 'Settings' },
 ];
 

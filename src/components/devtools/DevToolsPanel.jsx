@@ -6,7 +6,6 @@ import SandboxPanel from "./panels/SandboxPanel";
 import DeviceSimPanel from "./panels/DeviceSimPanel";
 import AiAssistantPanel from "./panels/AiAssistantPanel";
 import GitPanel from "./panels/GitPanel";
-import WorkspacePanel from "./panels/WorkspacePanel";
 import SettingsPanel from "./panels/SettingsPanel";
 
 export default function DevToolsPanel({
@@ -121,8 +120,6 @@ export default function DevToolsPanel({
         );
       case "git":
         return <GitPanel />;
-      case "workspace":
-        return <WorkspacePanel />;
       case "settings":
         return <SettingsPanel />;
       default:
