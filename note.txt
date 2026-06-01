@@ -1,0 +1,118 @@
+Based on the project document you provided, here is a comprehensive list of the features promised in the **Mini Dev-Centric Browser**:
+
+### Core Browsing Features
+- Multi-tab browsing interface using Chromium WebView
+- Standard navigation controls (back, forward, reload, home)
+- URL address bar with auto-completion
+- Bookmark management
+- Session persistence (preserving history and tabs across sessions)
+- Local file access via `file://` protocol
+
+### Developer Tools & Debugging
+
+**JavaScript Console:**
+- Real-time capture of logs, warnings, errors, and info messages
+- Filtering by message type
+- Keyword search
+- Export logs as text files
+- AI-powered error explanation (when internet is available)
+
+**Network Inspector:**
+- Monitor all HTTP/HTTPS requests/responses
+- View headers, payloads, timing metrics, and status codes
+- Filter by URL patterns, methods, status codes, content types
+- Save and recall filter sets
+- One-click population of API tester from captured requests
+
+### API Testing
+- Built-in REST client supporting GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD
+- Configurable parameters, headers, and authentication (Basic, Bearer, API Key)
+- Request body editor with syntax highlighting
+- Response viewer with formatted JSON/XML/HTML
+- Request history
+- Save requests into collections with hierarchical folders
+- Export/import collections as JSON
+- Environment variables for different deployment contexts (dev/staging/prod)
+
+### Live Code Sandbox
+- Synchronized editors for HTML, CSS, JavaScript
+- Real-time preview in isolated iframe
+- Syntax highlighting and line numbering
+- Error highlighting for JavaScript
+- Import external libraries via CDN URLs
+- Curated library of common snippets
+- Export as individual files or combined archives
+- Import from local file system
+
+### Device Viewport Simulator
+- Preset profiles for mobile (iPhone 12, etc.), tablets, and desktop
+- Custom dimension support (200px to 4096px)
+- Portrait/landscape orientation toggling
+- Zoom controls (50% to 200%)
+- Visual device framing
+
+### Git Integration
+- Auto-detects existing Git repositories
+- Display repository status (branch, commit differentials, uncommitted changes)
+- Save API collections and sandbox code directly to Git
+- Simplified commit panel with intelligent message generation
+- Branch switching
+- Diff preview for modified files
+- Workspace states exportable as version-controlled JSON files
+
+### AI-Powered Development Assistant
+- AI-generated explanations for JavaScript console errors
+- Suggested API test cases from captured network traffic
+- Context-aware code completion in sandbox editor
+- cURL command import → automatic conversion to API requests
+- Configurable privacy controls (enable/disable specific assistance types)
+
+### Workspace & Session Management
+- Save complete development state (tabs, console logs, network history, API collections, sandbox code, device settings)
+- Restore saved workspaces identically
+- Automatic save at configurable intervals
+- Session recovery after unexpected termination
+- Workspace tagging, searching, and categorization
+- Export workspaces as portable files
+
+### UI & User Experience
+- Clean, professional interface with dark theme as default
+- Keyboard-first workflows with comprehensive shortcuts (F12, Ctrl+T, Ctrl+Shift+I, etc.)
+- Customizable keyboard shortcuts
+- Consistent design language across all tool panels
+- Resizable, dockable, and hideable tool panels
+- Layout configurations savable as part of workspaces
+
+### Performance Targets
+- Startup time under 5 seconds on recommended hardware
+- Sub-100ms feedback for common actions (tab switching, panel toggling)
+- Sub-500ms for complex tasks (API requests, sandbox rendering)
+- Memory usage under 500MB for typical usage (5-10 tabs with all tools active)
+- Mean time between failures exceeding 40 hours
+
+### Platform & Compatibility
+- Windows 10/11 (64-bit) desktop application
+- Support for high-DPI displays
+- Minimum: 4GB RAM, 2GHz dual-core, 500MB disk
+- Recommended: 8GB RAM, 2.5GHz quad-core, SSD
+
+### Security & Data Protection
+- Process isolation and sandboxing (Electron security best practices)
+- API keys and tokens masked in UI and logs
+- Optional workspace encryption
+- HTTPS enforcement for external requests
+- Opt-in for AI features with data sharing disclosure
+
+### Extensibility (Future/Architectural)
+- Plugin system for additional tools without modifying core code
+- Extension points for third-party development
+
+### What's explicitly **NOT** promised (Out of Scope)
+- Mobile app versions (iOS/Android)
+- Web-based deployment
+- Modifications to Chromium rendering engine
+- Advanced dev tools (performance profiling, accessibility auditing, security testing)
+- Real-time collaboration or cloud sync
+- macOS/Linux support (initial release - Windows only)
+- Enterprise deployment features
+- Formal accessibility certification

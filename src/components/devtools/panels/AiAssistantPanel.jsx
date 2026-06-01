@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-
+import { Hand } from "lucide-react";
 const DEFAULT_MODEL = "llama-3.1-8b-instant";
 
 export default function AiAssistantPanel({
@@ -11,7 +11,8 @@ export default function AiAssistantPanel({
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "👋 Hi! I'm your AI debugging assistant. I can help explain errors, suggest fixes, and generate test cases. Ask me anything!",
+      icon: <Hand h="32" w="32" />,
+      text: ` Hi! I'm your AI debugging assistant. I can help explain errors, suggest fixes, and generate test cases. Ask me anything!`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -287,7 +288,9 @@ export default function AiAssistantPanel({
             key={i}
             className={`ai-assistant__msg ai-assistant__msg--${msg.role}`}
           >
-            {renderMessageText(msg.text)}
+            <span style={{ display: "flex", gap: "6px" }}>
+              {msg.icon} {renderMessageText(msg.text)}{" "}
+            </span>
           </div>
         ))}
       </div>
