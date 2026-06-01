@@ -44,6 +44,23 @@ const DEFAULT_JS = `document.getElementById('btn')?.addEventListener('click', ()
 
 const TAB_OPTIONS = ["html", "css", "js", "console", "settings"];
 const DOWNLOAD_CLASS = "sandbox__download-link";
+const GIT_STORAGE_KEY = "devcentric.repoPath";
+
+function mapGitStatus(file) {
+  const status = file.working_dir || file.index || "";
+  if (status === "?" || status === "U") return "untracked";
+  if (status === "A") return "added";
+  if (status === "D") return "deleted";
+  if (status === "R") return "renamed";
+  return "modified";
+}
+
+function formatGitFile(file) {
+  return {
+    name: file.path,
+    status: mapGitStatus(file),
+  };
+}
 
 const MONACO_OPTIONS = {
   automaticLayout: true,
@@ -277,6 +294,19 @@ export default function SandboxPanel() {
   const [expandedFolders, setExpandedFolders] = useState(() => new Set());
   const [newFileName, setNewFileName] = useState("");
   const [newFileType, setNewFileType] = useState("html");
+  const [repoPath, setRepoPath] = useState("");
+  const [branch, setBranch] = useState("");
+  const [ahead, setAhead] = useState(0);
+  const [behind, setBehind] = useState(0);
+  const [files, setFiles] = useState([]);
+  const [commitMsg, setCommitMsg] = useState("");
+  const [gitLoading, setGitLoading] = useState(false);
+  const [gitError, setGitError] = useState("");
+  const [auth, setAuth] = useState({ authenticated: false, user: null });
+  const [deviceFlow, setDeviceFlow] = useState(null);
+  const [deviceStatus, setDeviceStatus] = useState("");
+
+  const changedCount = files.length;
 
   const folderRootLabel = useMemo(() => {
     if (folderFiles.length === 0) return "Folder";
@@ -294,6 +324,12 @@ export default function SandboxPanel() {
     () => folderFiles.find((entry) => entry.path === activeFolderFile) || null,
     [activeFolderFile, folderFiles],
   );
+
+  const statusBadge = useMemo(() => {
+    if (!repoPath) return "No repo";
+    if (ahead || behind) return `Ahead ${ahead} / Behind ${behind}`;
+    return "Up to date";
+  }, [repoPath, ahead, behind]);
 
   const updateFolderEntryText = useCallback((path, nextText) => {
     if (!path) return;
@@ -327,6 +363,53 @@ export default function SandboxPanel() {
     input.setAttribute("multiple", "");
   }, []);
 
+  useEffect(() => {
+    const loadAuth = async () => {
+      const res = await window.electronAPI?.githubStatus?.();
+      if (res?.ok && res.authenticated) {
+        setAuth({ authenticated: true, user: res.user });
+      }
+    };
+    loadAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!deviceFlow) return undefined;
+    let stopped = false;
+
+    const poll = async () => {
+      if (stopped) return;
+
+      const res = await window.electronAPI?.githubPoll?.(deviceFlow.device_code);
+      if (!res) return;
+
+      if (res.ok && res.access_token) {
+        setDeviceStatus("Authenticated");
+        const status = await window.electronAPI?.githubStatus?.();
+        if (status?.ok && status.authenticated) {
+          setAuth({ authenticated: true, user: status.user });
+        }
+        setDeviceFlow(null);
+        return;
+      }
+
+      if (res.error === "authorization_pending") {
+        setDeviceStatus("Waiting for approval...");
+      } else if (res.error === "slow_down") {
+        setDeviceStatus("Slow down requested by GitHub...");
+      } else if (res.error) {
+        setDeviceStatus(res.error_description || res.error);
+      }
+
+      setTimeout(poll, (deviceFlow.interval || 5) * 1000);
+    };
+
+    poll();
+    return () => {
+      stopped = true;
+    };
+  }, [deviceFlow]);
+
   const addLog = useCallback((entry) => {
     setLogs((prev) => [entry, ...prev].slice(0, 200));
   }, []);
@@ -334,6 +417,112 @@ export default function SandboxPanel() {
   const clearConsole = useCallback(() => {
     setLogs([]);
   }, []);
+
+  const loadRepoData = useCallback(async (path) => {
+    if (!path) return;
+    setGitLoading(true);
+    setGitError("");
+
+    try {
+      const statusRes = await window.electronAPI?.gitStatus?.(path);
+      if (!statusRes?.ok) {
+        throw new Error(statusRes?.error || "Unable to read repository status.");
+      }
+
+      const status = statusRes.status;
+      setFiles((status.files || []).map(formatGitFile));
+      setAhead(status.ahead || 0);
+      setBehind(status.behind || 0);
+
+      const branchRes = await window.electronAPI?.gitBranches?.(path);
+      if (!branchRes?.ok) {
+        throw new Error(branchRes?.error || "Unable to read branches.");
+      }
+      setBranch(branchRes.branches.current || "");
+    } catch (err) {
+      setGitError(err?.message || String(err));
+    } finally {
+      setGitLoading(false);
+    }
+  }, []);
+
+  const handleSelectRepo = useCallback(async () => {
+    const result = await window.electronAPI?.selectRepo?.();
+    if (!result || result.canceled) return;
+    if (!result.ok) {
+      setGitError(result.error || "Unable to select repository.");
+      return;
+    }
+
+    setRepoPath(result.repoPath);
+    localStorage.setItem(GIT_STORAGE_KEY, result.repoPath);
+    loadRepoData(result.repoPath);
+  }, [loadRepoData]);
+
+  const handleCommit = useCallback(async () => {
+    if (!repoPath || !commitMsg.trim()) return;
+    setGitLoading(true);
+    setGitError("");
+
+    try {
+      const res = await window.electronAPI?.gitCommit?.(repoPath, commitMsg);
+      if (!res?.ok) throw new Error(res?.error || "Commit failed.");
+      setCommitMsg("");
+      await loadRepoData(repoPath);
+    } catch (err) {
+      setGitError(err?.message || String(err));
+    } finally {
+      setGitLoading(false);
+    }
+  }, [commitMsg, loadRepoData, repoPath]);
+
+  const handlePush = useCallback(async () => {
+    if (!repoPath) return;
+    setGitLoading(true);
+    setGitError("");
+
+    try {
+      const res = await window.electronAPI?.gitPush?.(repoPath);
+      if (!res?.ok) throw new Error(res?.error || "Push failed.");
+      await loadRepoData(repoPath);
+    } catch (err) {
+      setGitError(err?.message || String(err));
+    } finally {
+      setGitLoading(false);
+    }
+  }, [loadRepoData, repoPath]);
+
+  const handleLogout = useCallback(async () => {
+    await window.electronAPI?.githubLogout?.();
+    setAuth({ authenticated: false, user: null });
+    setDeviceFlow(null);
+    setDeviceStatus("");
+  }, []);
+
+  const startDeviceFlow = useCallback(async () => {
+    setGitError("");
+    setDeviceStatus("");
+    const res = await window.electronAPI?.githubDeviceCode?.();
+    if (!res?.ok) {
+      setGitError(res?.error || "Unable to start GitHub login.");
+      return;
+    }
+    setDeviceFlow(res);
+    setDeviceStatus("Follow the steps to authorize this app.");
+  }, []);
+
+  const openVerification = useCallback(async () => {
+    if (!deviceFlow?.verification_uri) return;
+    await window.electronAPI?.openExternal?.(deviceFlow.verification_uri);
+  }, [deviceFlow]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(GIT_STORAGE_KEY) || "";
+    if (saved) {
+      setRepoPath(saved);
+      loadRepoData(saved);
+    }
+  }, [loadRepoData]);
 
   const handleMessage = useCallback(
     (event) => {
@@ -1055,6 +1244,121 @@ export default function SandboxPanel() {
           className="sandbox__left-panel"
           style={{ flexBasis: `${splitRatio}%` }}
         >
+          <div className="sandbox__git-card">
+            <div className="sandbox__git-card-header">
+              <div>
+                <div className="sandbox__git-card-title">Git</div>
+                <div className="sandbox__git-card-caption">
+                  {auth.authenticated
+                    ? `Signed in as ${auth.user?.login || "GitHub user"}`
+                    : "GitHub not connected"}
+                </div>
+              </div>
+              <span className="sandbox__git-badge">{statusBadge}</span>
+            </div>
+
+            <div className="sandbox__git-row">
+              <button
+                type="button"
+                className="btn sandbox__explorer-btn sandbox__icon-btn"
+                onClick={auth.authenticated ? handleLogout : startDeviceFlow}
+              >
+                <span className="sandbox__btn-icon">
+                  {auth.authenticated ? "↩" : "G"}
+                </span>
+                <span className="sandbox__btn-text">
+                  {auth.authenticated ? "Sign out" : "Sign in"}
+                </span>
+              </button>
+              {deviceFlow?.verification_uri && (
+                <button
+                  type="button"
+                  className="btn sandbox__explorer-btn sandbox__icon-btn"
+                  onClick={openVerification}
+                >
+                  <span className="sandbox__btn-icon">↗</span>
+                  <span className="sandbox__btn-text">Open Login</span>
+                </button>
+              )}
+            </div>
+
+            {deviceFlow && (
+              <div className="sandbox__git-note">
+                1) Open {deviceFlow.verification_uri}
+                <br />
+                2) Enter code <strong>{deviceFlow.user_code}</strong>
+              </div>
+            )}
+
+            <div className="sandbox__git-row sandbox__git-row--stack">
+              <div className="sandbox__git-meta">
+                Repo: {repoPath || "Not selected"}
+              </div>
+              <div className="sandbox__git-meta">
+                {branch || "No branch"} • {changedCount} changed file
+                {changedCount === 1 ? "" : "s"}
+              </div>
+              <div className="sandbox__git-meta">
+                Ahead {ahead} / Behind {behind}
+              </div>
+            </div>
+
+            <div className="sandbox__git-row">
+              <button
+                type="button"
+                className="btn sandbox__explorer-btn sandbox__icon-btn"
+                onClick={handleSelectRepo}
+                disabled={gitLoading}
+              >
+                <span className="sandbox__btn-icon">+</span>
+                <span className="sandbox__btn-text">Select Repo</span>
+              </button>
+              <button
+                type="button"
+                className="btn sandbox__explorer-btn sandbox__icon-btn"
+                onClick={() => repoPath && loadRepoData(repoPath)}
+                disabled={!repoPath || gitLoading}
+              >
+                <span className="sandbox__btn-icon">↻</span>
+                <span className="sandbox__btn-text">Refresh</span>
+              </button>
+            </div>
+
+            <textarea
+              className="sandbox__git-input"
+              placeholder="Commit message"
+              value={commitMsg}
+              onChange={(event) => setCommitMsg(event.target.value)}
+            />
+
+            <div className="sandbox__git-row">
+              <button
+                type="button"
+                className="btn sandbox__explorer-btn sandbox__icon-btn"
+                onClick={handleCommit}
+                disabled={!repoPath || !commitMsg.trim() || gitLoading}
+              >
+                <span className="sandbox__btn-icon">C</span>
+                <span className="sandbox__btn-text">Commit</span>
+              </button>
+              <button
+                type="button"
+                className="btn sandbox__explorer-btn sandbox__icon-btn"
+                onClick={handlePush}
+                disabled={!repoPath || gitLoading || !auth.authenticated}
+              >
+                <span className="sandbox__btn-icon">P</span>
+                <span className="sandbox__btn-text">Push</span>
+              </button>
+            </div>
+
+            {gitLoading && <div className="sandbox__git-caption">Working...</div>}
+            {gitError && <div className="sandbox__git-error">{gitError}</div>}
+            {deviceStatus && !auth.authenticated && (
+              <div className="sandbox__git-caption">{deviceStatus}</div>
+            )}
+          </div>
+
           <aside
             className="sandbox__explorer"
             onDrop={handleFolderDrop}

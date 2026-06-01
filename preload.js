@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   gitBranches: (repoPath) => ipcRenderer.invoke("git:branches", repoPath),
   gitCommit: (repoPath, message) =>
     ipcRenderer.invoke("git:commit", repoPath, message),
+  gitPush: (repoPath) => ipcRenderer.invoke("git:push", repoPath),
   openExternal: (url) => ipcRenderer.invoke("shell:openExternal", url),
   githubDeviceCode: () => ipcRenderer.invoke("github:deviceCode"),
   githubPoll: (deviceCode) => ipcRenderer.invoke("github:poll", deviceCode),
