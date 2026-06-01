@@ -93,6 +93,7 @@ export default function App() {
     height: 844,
     orientation: "portrait",
     multiPane: false,
+    zoom: "fit",
   });
 
   const [tabHtml, setTabHtml] = useState({});
@@ -579,13 +580,11 @@ export default function App() {
       setDeviceSim((prev) => ({
         ...prev,
         enabled: true,
-        multiPane: true,
       }));
     } else {
       setDeviceSim((prev) => ({
         ...prev,
         enabled: false,
-        multiPane: false,
       }));
     }
   }, [activeTool]);
@@ -912,7 +911,7 @@ export default function App() {
               }}
             />
 
-            {activeTool && activeTool !== "device" && (
+            {activeTool && (
               <DevToolsPanel
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
