@@ -1,12 +1,12 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import monacoEditorPlugin from 'vite-plugin-monaco-editor';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import monacoEditorPlugin from "vite-plugin-monaco-editor";
 
 export default defineConfig({
   plugins: [react(), monacoEditorPlugin({})],
   base: './',
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     emptyOutDir: true,
   },
   server: {

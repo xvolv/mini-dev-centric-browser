@@ -340,7 +340,7 @@ export default function BrowserView({
     const handleDomReady = () => {
       scheduleCapture(0);
       scheduleCapture(1500);
-      collectFavicon(webview, tabId);
+      collectFavicon(webview, activeTabId);
     };
     const handleFinish = () => {
       scheduleCapture(0);

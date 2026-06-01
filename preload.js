@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   aiSetSettings: (settings) => ipcRenderer.invoke("ai:setSettings", settings),
   apiSend: (payload) => ipcRenderer.invoke("api:send", payload),
   exportConsoleLogs: (entries) => ipcRenderer.invoke("console:export", entries),
+  openSandboxFolder: () => ipcRenderer.invoke("sandbox:openFolder"),
   webviewPreloadPath: path.join(__dirname, "webview-preload.js"),
 });
 
