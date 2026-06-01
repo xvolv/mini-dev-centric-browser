@@ -8,13 +8,67 @@ import SandboxPanel from "./components/devtools/panels/SandboxPanel";
 import DevToolsPanel from "./components/devtools/DevToolsPanel";
 
 let nextTabId = 2;
+const TABS_STORAGE_KEY = "mini-dev-centric.tabs.v1";
+
+const loadTabState = () => {
+  try {
+    const raw = window.localStorage.getItem(TABS_STORAGE_KEY);
+    if (!raw) {
+      return {
+        tabs: [{ id: 1, title: "New Tab", url: "", favicon: "" }],
+        activeTabId: 1,
+        nextTabId: 2,
+      };
+    }
+
+    const parsed = JSON.parse(raw);
+    const storedTabs = Array.isArray(parsed?.tabs) ? parsed.tabs : [];
+    const tabs = storedTabs
+      .map((tab) => ({
+        id: Number.isFinite(tab?.id) ? tab.id : null,
+        title: typeof tab?.title === "string" ? tab.title : "New Tab",
+        url: typeof tab?.url === "string" ? tab.url : "",
+        favicon: typeof tab?.favicon === "string" ? tab.favicon : "",
+      }))
+      .filter((tab) => Number.isFinite(tab.id));
+
+    if (tabs.length === 0) {
+      return {
+        tabs: [{ id: 1, title: "New Tab", url: "", favicon: "" }],
+        activeTabId: 1,
+        nextTabId: 2,
+      };
+    }
+
+    const maxId = tabs.reduce((max, tab) => Math.max(max, tab.id), 1);
+    const requestedActive = Number.isFinite(parsed?.activeTabId)
+      ? parsed.activeTabId
+      : tabs[0].id;
+    const activeTabId = tabs.some((tab) => tab.id === requestedActive)
+      ? requestedActive
+      : tabs[0].id;
+
+    return {
+      tabs,
+      activeTabId,
+      nextTabId: maxId + 1,
+    };
+  } catch (error) {
+    return {
+      tabs: [{ id: 1, title: "New Tab", url: "", favicon: "" }],
+      activeTabId: 1,
+      nextTabId: 2,
+    };
+  }
+};
 
 export default function App() {
-  const [tabs, setTabs] = useState([
-    { id: 1, title: "New Tab", url: "", favicon: "" },
-  ]);
+  const initialTabStateRef = useRef(loadTabState());
+  const { tabs: initialTabs, activeTabId: initialActiveTabId, nextTabId: initialNextTabId } =
+    initialTabStateRef.current;
 
-  const [activeTabId, setActiveTabId] = useState(1);
+  const [tabs, setTabs] = useState(initialTabs);
+  const [activeTabId, setActiveTabId] = useState(initialActiveTabId);
   const [activeTool, setActiveTool] = useState(null);
 
   const [canGoBack, setCanGoBack] = useState(false);
@@ -47,6 +101,27 @@ export default function App() {
   const requestAddressBarFocus = useRef(() => {});
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  useEffect(() => {
+    nextTabId = Math.max(nextTabId, initialNextTabId);
+  }, [initialNextTabId]);
+
+  useEffect(() => {
+    try {
+      const payload = {
+        tabs: tabs.map((tab) => ({
+          id: tab.id,
+          title: tab.title,
+          url: tab.url,
+          favicon: tab.favicon,
+        })),
+        activeTabId,
+      };
+      window.localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      // Ignore persistence failures.
+    }
+  }, [tabs, activeTabId]);
 
   const pushConsoleLog = useCallback((tabId, entry) => {
     if (tabId == null || !entry) return;
@@ -479,6 +554,12 @@ export default function App() {
       if (e.ctrlKey && e.key === "t") {
         e.preventDefault();
         handleNewTab();
+        return;
+      }
+
+      if (e.ctrlKey && (e.key === "w" || e.key === "W")) {
+        e.preventDefault();
+        if (activeTabId != null) handleCloseTab(activeTabId);
       }
     };
 
@@ -487,7 +568,7 @@ export default function App() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [activeTabId]);
 
   useEffect(() => {
     if (activeTool === "device") {
