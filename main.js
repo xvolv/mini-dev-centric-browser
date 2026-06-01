@@ -1090,6 +1090,23 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle("git:push", async (_event, repoPath) => {
+    try {
+      const git = await getRepoGit(repoPath);
+      const status = await git.status();
+      const currentBranch =
+        status?.current || status?.branch || status?.currentBranch || "";
+      if (!currentBranch) {
+        return { ok: false, error: "No active branch to push." };
+      }
+
+      await git.push("origin", currentBranch);
+      return { ok: true, branch: currentBranch };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
   mainWindow.on("maximize", () => {
     mainWindow.webContents.send("window:maximized-change", true);
   });
