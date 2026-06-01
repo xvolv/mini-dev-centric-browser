@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "mini-dev-centric.network-filters.v1";
-
 const METHOD_OPTIONS = ["all", "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 const STATUS_OPTIONS = ["all", "success", "redirect", "client-error", "server-error", "error"];
 const RESOURCE_OPTIONS = ["all", "xhr", "fetch", "document", "script", "stylesheet", "image", "font", "other"];
@@ -76,28 +74,6 @@ function getResponseBody(request) {
   return normalizeValue(request.responseBody ?? "");
 }
 
-function readStoredPresets() {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredPresets(presets) {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
-  } catch {
-    // ignore storage errors
-  }
-}
-
 function serializeFilters(filters) {
   return JSON.stringify(filters);
 }
@@ -117,17 +93,6 @@ export default function NetworkPanel({
   const [statusFilter, setStatusFilter] = useState("all");
   const [resourceFilter, setResourceFilter] = useState("all");
   const [selectedRequestKey, setSelectedRequestKey] = useState("");
-  const [savedPresets, setSavedPresets] = useState([]);
-  const [presetName, setPresetName] = useState("");
-  const [activePresetId, setActivePresetId] = useState("");
-
-  useEffect(() => {
-    setSavedPresets(readStoredPresets());
-  }, []);
-
-  useEffect(() => {
-    saveStoredPresets(savedPresets);
-  }, [savedPresets]);
 
   const getMethodClass = (method) =>
     `network__method network__method--${String(method || "").toLowerCase()}`;
@@ -209,42 +174,6 @@ export default function NetworkPanel({
     return entries.find((request) => getRequestKey(request) === selectedRequestKey) || null;
   }, [entries, filtered, selectedRequestKey]);
 
-  const applyPreset = (preset) => {
-    if (!preset?.filters) return;
-    setFilterText(preset.filters.filterText || "");
-    setMethodFilter(preset.filters.methodFilter || "all");
-    setStatusFilter(preset.filters.statusFilter || "all");
-    setResourceFilter(preset.filters.resourceFilter || "all");
-    setActivePresetId(preset.id || "");
-  };
-
-  const handleSavePreset = () => {
-    const name = presetName.trim();
-    if (!name) return;
-
-    const preset = {
-      id: `${Date.now()}`,
-      name,
-      filters: {
-        filterText,
-        methodFilter,
-        statusFilter,
-        resourceFilter,
-      },
-    };
-
-    setSavedPresets((prev) => [preset, ...prev].slice(0, 10));
-    setPresetName("");
-    setActivePresetId(preset.id);
-  };
-
-  const handleDeletePreset = (presetId) => {
-    setSavedPresets((prev) => prev.filter((preset) => preset.id !== presetId));
-    if (activePresetId === presetId) {
-      setActivePresetId("");
-    }
-  };
-
   const handleExport = async (format) => {
     if (typeof onExport !== "function") return;
     await onExport(format, filtered);
@@ -311,40 +240,7 @@ export default function NetworkPanel({
           </label>
         </div>
 
-        <div className="network__preset-bar">
-          <input
-            className="network__preset-input"
-            type="text"
-            placeholder="Save preset as..."
-            value={presetName}
-            onChange={(e) => setPresetName(e.target.value)}
-          />
-          <button className="btn" type="button" onClick={handleSavePreset} disabled={!presetName.trim()}>
-            Save
-          </button>
-          <select
-            className="network__preset-select"
-            value={activePresetId}
-            onChange={(e) => {
-              const preset = savedPresets.find((item) => item.id === e.target.value);
-              if (preset) applyPreset(preset);
-            }}
-          >
-            <option value="">Load saved preset...</option>
-            {savedPresets.map((preset) => (
-              <option key={preset.id} value={preset.id}>{preset.name}</option>
-            ))}
-          </select>
-          {activePresetId ? (
-            <button
-              className="btn"
-              type="button"
-              onClick={() => handleDeletePreset(activePresetId)}
-              title="Delete active preset"
-            >
-              Delete
-            </button>
-          ) : null}
+        <div className="network__toolbar-row network__toolbar-row--wrap">
           <button className="btn" type="button" onClick={() => handleExport("txt")} disabled={filtered.length === 0}>
             Export TXT
           </button>
