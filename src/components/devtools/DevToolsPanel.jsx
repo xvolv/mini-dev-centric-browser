@@ -25,12 +25,15 @@ export default function DevToolsPanel({
   activeTabHtml,
   activeTabHtmlUpdatedAt,
   aiDraft,
-  latestApiRequest,
+  apiTesterDraftRequest,
   activeTabId,
   activeTabUrl,
   onDevToolsWebviewReady,
   onDevToolsConsoleMessage,
   onDevToolsApiRequest,
+  autoPopulateNetworkToApiTester,
+  onSendToApiTester,
+  onConsumeApiTesterDraft,
   onClose,
 }) {
   const MIN_PANEL_WIDTH = 520;
@@ -82,21 +85,17 @@ export default function DevToolsPanel({
             entries={networkEntries}
             onClear={onClearNetwork}
             onExport={onExportNetwork}
-          />
-        );
-      case "network-history":
-        return (
-          <NetworkPanel
-            entries={networkHistoryEntries}
-            onClear={onRefreshNetworkHistory}
-            onExport={onExportNetwork}
-            primaryActionLabel="Refresh"
-            primaryActionTitle="Reload persisted network history"
-            primaryActionIcon="↻"
+            autoPopulateEnabled={autoPopulateNetworkToApiTester}
+            onSendToApiTester={onSendToApiTester}
           />
         );
       case "api":
-        return <ApiTesterPanel latestRequest={latestApiRequest} />;
+        return (
+          <ApiTesterPanel
+            pendingRequest={apiTesterDraftRequest}
+            onConsumePendingRequest={onConsumeApiTesterDraft}
+          />
+        );
       case "sandbox":
         return <SandboxPanel />;
       case "device":
