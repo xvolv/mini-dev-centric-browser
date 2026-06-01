@@ -1,296 +1,454 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Console Test - Full Demo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Dev Browser | Console Test Suite</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 30px;
-            background: #1e1e1e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.5;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            border-bottom: 1px solid #2a2a2a;
+            padding: 24px 32px;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
             color: #fff;
-            max-width: 800px;
+        }
+
+        .header h1 span {
+            color: #3b82f6;
+        }
+
+        .header p {
+            color: #888;
+            margin-top: 8px;
+            font-size: 0.875rem;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 32px;
         }
-        h1 { color: #4ec9b0; border-bottom: 2px solid #4ec9b0; padding-bottom: 10px; }
-        h2 { color: #ce9178; margin-top: 25px; }
-        button {
-            background: #007acc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 8px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: all 0.2s;
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
         }
-        button:hover { background: #005a9e; transform: scale(1.02); }
-        .section {
-            background: #2d2d2d;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 8px;
-            border-left: 4px solid #007acc;
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
-        .log-section { border-left-color: #4ec9b0; }
-        .warn-section { border-left-color: #dcdcaa; }
-        .error-section { border-left-color: #f48771; }
-        .info-section { border-left-color: #9cdcfe; }
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
+
+        /* Cards */
+        .card {
+            background: #111;
+            border: 1px solid #2a2a2a;
             border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-            margin-left: 10px;
+            overflow: hidden;
         }
-        .badge-log { background: #4ec9b0; color: #1e1e1e; }
-        .badge-warn { background: #dcdcaa; color: #1e1e1e; }
-        .badge-error { background: #f48771; color: #1e1e1e; }
-        .badge-info { background: #9cdcfe; color: #1e1e1e; }
-        pre {
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-log { background: #0d4b6e; color: #7dd3fc; }
+        .badge-warn { background: #5c3d00; color: #fbbf24; }
+        .badge-error { background: #7f1a1a; color: #f87171; }
+        .badge-info { background: #1e3a5f; color: #93c5fd; }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        button {
             background: #1e1e1e;
-            padding: 10px;
-            border-radius: 5px;
-            overflow-x: auto;
-            font-size: 12px;
-            border: 1px solid #444;
-        }
-        .result-area {
-            background: #1e1e1e;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #444;
-            margin-top: 10px;
-        }
-        .instruction {
-            background: #0d4b6e;
-            padding: 15px;
+            border: 1px solid #3a3a3a;
+            color: #e0e0e0;
+            padding: 8px 16px;
             border-radius: 8px;
-            margin: 15px 0;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
-        code {
-            background: #1e1e1e;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #ce9178;
+
+        button:hover {
+            background: #2a2a2a;
+            border-color: #4a4a4a;
+            transform: translateY(-1px);
         }
+
+        button.primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: #2563eb;
+        }
+
+        /* Counter Section */
+        .counter-section {
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .counter-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: #3b82f6;
+        }
+
+        .counter-label {
+            color: #888;
+            font-size: 0.875rem;
+            margin-top: 4px;
+        }
+
+        /* Activity Log */
+        .log-panel {
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+        }
+
+        .log-panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+        }
+
+        .log-panel-content {
+            padding: 16px 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.75rem;
+            background: #0a0a0a;
+        }
+
+        .log-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid #1a1a1a;
+            color: #aaa;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .timestamp {
+            color: #555;
+            margin-right: 12px;
+        }
+
+        /* Utility */
+        .text-center { text-align: center; }
+        .mt-4 { margin-top: 16px; }
+        .mb-4 { margin-bottom: 16px; }
     </style>
 </head>
 <body>
 
-    <h1>🧪 Console Test - Complete Demo</h1>
-    <p>Open the <strong>JavaScript Console panel</strong> in Mini Dev-Centric Browser to see captured messages.</p>
-
-    <div class="instruction">
-        <strong>🎯 EXPECTED RESULT:</strong><br>
-        - Log messages → Should show <strong>● or 📝 icon</strong> and count under "Log"<br>
-        - Warning messages → Should show <strong>⚠️ icon</strong> and count under "Warn"<br>
-        - Error messages → Should show <strong>✕ or ❌ icon</strong> and count under "Error"<br>
-        - Info messages → Should show <strong>ℹ️ icon</strong> and count under "Info"
+    <div class="header">
+        <h1>Mini Dev Browser · <span>Console Test Suite</span></h1>
+        <p>Professional testing environment for JavaScript Console validation</p>
     </div>
 
-    <!-- LOG SECTION -->
-    <div class="section log-section">
-        <h2>📝 LOG Messages <span class="badge badge-log">console.log()</span></h2>
-        <button onclick="sendLog1()">Log: Simple Message</button>
-        <button onclick="sendLog2()">Log: With Variable</button>
-        <button onclick="sendLog3()">Log: Object</button>
-        <button onclick="sendMultipleLogs()">Send 5 Logs</button>
-    </div>
+    <div class="container">
 
-    <!-- WARNING SECTION -->
-    <div class="section warn-section">
-        <h2>⚠️ WARNING Messages <span class="badge badge-warn">console.warn()</span></h2>
-        <button onclick="sendWarn1()">Warn: Simple</button>
-        <button onclick="sendWarn2()">Warn: Deprecation</button>
-        <button onclick="sendWarn3()">Warn: Performance</button>
-        <button onclick="sendMultipleWarns()">Send 3 Warnings</button>
-    </div>
-
-    <!-- ERROR SECTION -->
-    <div class="section error-section">
-        <h2>❌ ERROR Messages <span class="badge badge-error">console.error()</span></h2>
-        <button onclick="sendError1()">Error: Simple</button>
-        <button onclick="sendError2()">Error: Network</button>
-        <button onclick="sendError3()">Error: Validation</button>
-        <button onclick="sendMultipleErrors()">Send 3 Errors</button>
-    </div>
-
-    <!-- INFO SECTION -->
-    <div class="section info-section">
-        <h2>ℹ️ INFO Messages <span class="badge badge-info">console.info()</span></h2>
-        <button onclick="sendInfo1()">Info: User Action</button>
-        <button onclick="sendInfo2()">Info: System Status</button>
-        <button onclick="sendInfo3()">Info: Loading</button>
-        <button onclick="sendMultipleInfos()">Send 3 Infos</button>
-    </div>
-
-    <!-- BATCH TEST -->
-    <div class="section">
-        <h2>🚀 Batch Test (All Types)</h2>
-        <button onclick="sendAllTypes()">Send 1 of Each Type</button>
-        <button onclick="sendTenMixed()">Send 10 Mixed Messages</button>
-        <button onclick="clearAllConsole()">Clear Console (page side)</button>
-    </div>
-
-    <!-- LIVE COUNTER -->
-    <div class="section">
-        <h2>📊 Live Counter (Tests Real-time Capture)</h2>
-        <p>Counter: <strong id="counter" style="font-size: 24px; color: #4ec9b0;">0</strong></p>
-        <button onclick="incrementCounter()">Increment Counter → Logs each click</button>
-        <button onclick="resetCounter()">Reset Counter → Logs reset</button>
-    </div>
-
-    <!-- RESPONSE AREA -->
-    <div class="section">
-        <h2>📋 Activity Log (Page Side)</h2>
-        <div id="response-area" class="result-area">
-            <i>Click buttons above - activity will appear here and in Console panel</i>
+        <!-- Counter Card -->
+        <div class="counter-section">
+            <div>
+                <div class="counter-value" id="counterDisplay">0</div>
+                <div class="counter-label">Session Counter</div>
+            </div>
+            <div class="button-group">
+                <button onclick="incrementCounter()">+ Increment</button>
+                <button onclick="resetCounter()">↺ Reset</button>
+            </div>
         </div>
+
+        <!-- Main Grid -->
+        <div class="grid">
+            
+            <!-- LOG Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📄 <span style="color: #7dd3fc;">console.log()</span></h2>
+                    <span class="badge badge-log">LOG</span>
+                </div>
+                <div class="card-body">
+                    <div class="button-group">
+                        <button onclick="sendLog('Simple log message')">Simple</button>
+                        <button onclick="sendLog('User logged in: developer')">With Variable</button>
+                        <button onclick="sendObjectLog()">Log Object</button>
+                        <button onclick="sendBatchLogs(5)">Batch (5)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WARN Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>⚠️ <span style="color: #fbbf24;">console.warn()</span></h2>
+                    <span class="badge badge-warn">WARN</span>
+                </div>
+                <div class="card-body">
+                    <div class="button-group">
+                        <button onclick="sendWarn('Simple warning')">Simple</button>
+                        <button onclick="sendWarn('Deprecated API usage')">Deprecation</button>
+                        <button onclick="sendWarn('Performance threshold exceeded')">Performance</button>
+                        <button onclick="sendBatchWarns(3)">Batch (3)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ERROR Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>❌ <span style="color: #f87171;">console.error()</span></h2>
+                    <span class="badge badge-error">ERROR</span>
+                </div>
+                <div class="card-body">
+                    <div class="button-group">
+                        <button onclick="sendError('Simple error')">Simple</button>
+                        <button onclick="sendError('Network request failed')">Network</button>
+                        <button onclick="sendError('Validation failed')">Validation</button>
+                        <button onclick="sendBatchErrors(3)">Batch (3)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFO Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>ℹ️ <span style="color: #93c5fd;">console.info()</span></h2>
+                    <span class="badge badge-info">INFO</span>
+                </div>
+                <div class="card-body">
+                    <div class="button-group">
+                        <button onclick="sendInfo('User action recorded')">User Action</button>
+                        <button onclick="sendInfo('System operational')">System Status</button>
+                        <button onclick="sendInfo('Loading complete')">Loading</button>
+                        <button onclick="sendBatchInfos(3)">Batch (3)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Operations -->
+        <div class="card" style="margin-bottom: 32px;">
+            <div class="card-header">
+                <h2>⚡ Batch Operations</h2>
+            </div>
+            <div class="card-body">
+                <div class="button-group">
+                    <button class="primary" onclick="sendAllTypes()">Send All Types (1 each)</button>
+                    <button class="primary" onclick="sendMixedBatch(10)">Send Mixed (10 messages)</button>
+                    <button onclick="clearConsole()">Clear Console</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="log-panel">
+            <div class="log-panel-header">📋 Activity Log</div>
+            <div class="log-panel-content" id="activityLog">
+                <div class="log-entry"><span class="timestamp">●</span> Ready — Click any button to generate console output</div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // ============ LOG FUNCTIONS ============
-        function sendLog1() {
-            console.log("🐛 This is a simple log message");
-            addToLogArea("LOG sent: Simple message");
-        }
-        function sendLog2() {
-            const username = "Salhadin";
-            console.log(`👤 User logged in: ${username}`);
-            addToLogArea("LOG sent: User login");
-        }
-        function sendLog3() {
-            const user = { name: "Demo User", id: 123, role: "developer" };
-            console.log("📦 User object:", user);
-            addToLogArea("LOG sent: Object logged");
-        }
-        function sendMultipleLogs() {
-            for(let i = 1; i <= 5; i++) {
-                console.log(`📌 Log message #${i} - Timestamp: ${new Date().toLocaleTimeString()}`);
-            }
-            addToLogArea("5 LOG messages sent");
+        // Counter state
+        let sessionCounter = 0;
+
+        function updateCounterDisplay() {
+            document.getElementById('counterDisplay').innerText = sessionCounter;
         }
 
-        // ============ WARNING FUNCTIONS ============
-        function sendWarn1() {
-            console.warn("⚠️ This is a simple warning message");
-            addToLogArea("WARN sent: Simple warning");
-        }
-        function sendWarn2() {
-            console.warn("⚠️ Deprecation warning: This API will be removed in next version");
-            addToLogArea("WARN sent: Deprecation warning");
-        }
-        function sendWarn3() {
-            console.warn("⚠️ Performance warning: Page load time exceeded 3 seconds");
-            addToLogArea("WARN sent: Performance warning");
-        }
-        function sendMultipleWarns() {
-            for(let i = 1; i <= 3; i++) {
-                console.warn(`⚠️ Warning #${i} - Something might be wrong`);
+        function addActivityLog(message, type = 'info') {
+            const logContainer = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : (type === 'warn' ? '⚠️' : '✓');
+            entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${icon} ${message}`;
+            logContainer.insertBefore(entry, logContainer.firstChild);
+            
+            // Keep only last 20 entries
+            while(logContainer.children.length > 20) {
+                logContainer.removeChild(logContainer.lastChild);
             }
-            addToLogArea("3 WARNING messages sent");
         }
 
-        // ============ ERROR FUNCTIONS ============
-        function sendError1() {
-            console.error("❌ This is a simple error message");
-            addToLogArea("ERROR sent: Simple error");
-        }
-        function sendError2() {
-            console.error("❌ Network error: Failed to fetch data from API");
-            addToLogArea("ERROR sent: Network error");
-        }
-        function sendError3() {
-            console.error("❌ Validation error: Invalid email format");
-            addToLogArea("ERROR sent: Validation error");
-        }
-        function sendMultipleErrors() {
-            for(let i = 1; i <= 3; i++) {
-                console.error(`❌ Error #${i} - Something went wrong!`);
-            }
-            addToLogArea("3 ERROR messages sent");
+        // ============ LOG Functions ============
+        function sendLog(message) {
+            console.log(`📄 ${message}`);
+            addActivityLog(`LOG: ${message}`);
         }
 
-        // ============ INFO FUNCTIONS ============
-        function sendInfo1() {
-            console.info("ℹ️ User clicked the save button");
-            addToLogArea("INFO sent: User action");
-        }
-        function sendInfo2() {
-            console.info("ℹ️ System status: All services are operational");
-            addToLogArea("INFO sent: System status");
-        }
-        function sendInfo3() {
-            console.info("ℹ️ Loading completed in 1.2 seconds");
-            addToLogArea("INFO sent: Loading complete");
-        }
-        function sendMultipleInfos() {
-            for(let i = 1; i <= 3; i++) {
-                console.info(`ℹ️ Info message #${i} - For your information`);
-            }
-            addToLogArea("3 INFO messages sent");
+        function sendObjectLog() {
+            const user = { id: 1001, name: 'Demo User', role: 'developer', active: true };
+            console.log('User object:', user);
+            addActivityLog('LOG: Object logged — { id: 1001, name: "Demo User", ... }');
         }
 
-        // ============ BATCH FUNCTIONS ============
+        function sendBatchLogs(count) {
+            for(let i = 1; i <= count; i++) {
+                console.log(`📄 Batch log ${i} — ${new Date().toLocaleTimeString()}`);
+            }
+            addActivityLog(`LOG: ${count} messages sent`);
+        }
+
+        // ============ WARN Functions ============
+        function sendWarn(message) {
+            console.warn(`⚠️ ${message}`);
+            addActivityLog(`WARN: ${message}`, 'warn');
+        }
+
+        function sendBatchWarns(count) {
+            for(let i = 1; i <= count; i++) {
+                console.warn(`⚠️ Batch warning ${i}`);
+            }
+            addActivityLog(`WARN: ${count} warnings sent`, 'warn');
+        }
+
+        // ============ ERROR Functions ============
+        function sendError(message) {
+            console.error(`❌ ${message}`);
+            addActivityLog(`ERROR: ${message}`, 'error');
+        }
+
+        function sendBatchErrors(count) {
+            for(let i = 1; i <= count; i++) {
+                console.error(`❌ Batch error ${i}`);
+            }
+            addActivityLog(`ERROR: ${count} errors sent`, 'error');
+        }
+
+        // ============ INFO Functions ============
+        function sendInfo(message) {
+            console.info(`ℹ️ ${message}`);
+            addActivityLog(`INFO: ${message}`);
+        }
+
+        function sendBatchInfos(count) {
+            for(let i = 1; i <= count; i++) {
+                console.info(`ℹ️ Batch info ${i}`);
+            }
+            addActivityLog(`INFO: ${count} info messages sent`);
+        }
+
+        // ============ Batch Functions ============
         function sendAllTypes() {
-            console.log("📝 Batch: Log message");
-            console.warn("⚠️ Batch: Warning message");
-            console.error("❌ Batch: Error message");
-            console.info("ℹ️ Batch: Info message");
-            addToLogArea("BATCH sent: 1 of each type (Log, Warn, Error, Info)");
+            console.log('📄 Test log message');
+            console.warn('⚠️ Test warning message');
+            console.error('❌ Test error message');
+            console.info('ℹ️ Test info message');
+            addActivityLog('BATCH: Sent 1 of each type (LOG, WARN, ERROR, INFO)');
         }
 
-        function sendTenMixed() {
-            console.log("📝 Mixed #1");
-            console.warn("⚠️ Mixed #2");
-            console.error("❌ Mixed #3");
-            console.info("ℹ️ Mixed #4");
-            console.log("📝 Mixed #5");
-            console.warn("⚠️ Mixed #6");
-            console.error("❌ Mixed #7");
-            console.info("ℹ️ Mixed #8");
-            console.log("📝 Mixed #9");
-            console.warn("⚠️ Mixed #10");
-            addToLogArea("10 mixed messages sent (Log, Warn, Error, Info mixed)");
-        }
-
-        // ============ COUNTER ============
-        let count = 0;
-        function incrementCounter() {
-            count++;
-            document.getElementById('counter').innerText = count;
-            console.log(`Counter value: ${count}`);
-            addToLogArea(`Counter incremented to: ${count}`);
-        }
-        function resetCounter() {
-            count = 0;
-            document.getElementById('counter').innerText = count;
-            console.log(`Counter reset to: ${count}`);
-            addToLogArea(`Counter reset to: ${count}`);
-        }
-
-        // ============ CLEAR ============
-        function clearAllConsole() {
-            console.clear();
-            addToLogArea("Console cleared (page side)");
-        }
-
-        // ============ HELPER ============
-        function addToLogArea(msg) {
-            let area = document.getElementById('response-area');
-            let timestamp = new Date().toLocaleTimeString();
-            let div = document.createElement('div');
-            div.innerHTML = `[${timestamp}] ${msg}`;
-            area.insertBefore(div, area.firstChild);
-            if(area.children.length > 15) {
-                area.removeChild(area.lastChild);
+        function sendMixedBatch(total) {
+            const types = ['log', 'warn', 'error', 'info'];
+            for(let i = 1; i <= total; i++) {
+                const type = types[i % types.length];
+                switch(type) {
+                    case 'log': console.log(`📄 Mixed message #${i}`); break;
+                    case 'warn': console.warn(`⚠️ Mixed message #${i}`); break;
+                    case 'error': console.error(`❌ Mixed message #${i}`); break;
+                    case 'info': console.info(`ℹ️ Mixed message #${i}`); break;
+                }
             }
+            addActivityLog(`BATCH: ${total} mixed messages sent`);
+        }
+
+        // ============ Counter Functions ============
+        function incrementCounter() {
+            sessionCounter++;
+            updateCounterDisplay();
+            console.log(`Counter value: ${sessionCounter}`);
+            addActivityLog(`Counter → ${sessionCounter}`);
+        }
+
+        function resetCounter() {
+            sessionCounter = 0;
+            updateCounterDisplay();
+            console.log(`Counter reset to: ${sessionCounter}`);
+            addActivityLog(`Counter reset to 0`);
+        }
+
+        // ============ Clear ============
+        function clearConsole() {
+            console.clear();
+            addActivityLog('Console cleared');
         }
     </script>
 </body>
