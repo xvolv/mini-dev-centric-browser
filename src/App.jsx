@@ -78,7 +78,6 @@ export default function App() {
   const [canGoForward, setCanGoForward] = useState(false);
 
   const [networkLogs, setNetworkLogs] = useState({});
-  const [networkHistoryEntries, setNetworkHistoryEntries] = useState([]);
   const [latestApiRequestByTab, setLatestApiRequestByTab] = useState({});
   const [apiTesterDraftRequest, setApiTesterDraftRequest] = useState(null);
   const [toolSettings, setToolSettings] = useState({
@@ -246,8 +245,9 @@ export default function App() {
       method,
       url,
       headers,
-      body: payload.body,
-      responseBody: payload.responseBody,
+      body: payload.body ?? payload.requestBody,
+      requestBody: payload.requestBody ?? payload.body,
+      responseBody: payload.responseBody ?? payload.body,
       responseHeaders,
       contentType,
       status: payload.status ?? null,
@@ -293,31 +293,11 @@ export default function App() {
       return next;
     });
 
-    setLatestApiRequestByTab((prev) => ({
-      ...prev,
-      [tabId]: common,
-    }));
   }, []);
 
   const persistNetworkRequest = useCallback((tabId, entry) => {
     if (tabId == null || !entry?.requestId) return;
     window.electronAPI?.persistNetworkRequest?.(tabId, entry);
-  }, []);
-
-  const loadNetworkHistory = useCallback(async () => {
-    try {
-      const result = await window.electronAPI?.getNetworkHistory?.(2000);
-      if (!result?.ok) {
-        setNetworkHistoryEntries([]);
-        return;
-      }
-      setNetworkHistoryEntries(
-        Array.isArray(result.entries) ? result.entries : [],
-      );
-    } catch (error) {
-      console.error("Failed to load network history:", error);
-      setNetworkHistoryEntries([]);
-    }
   }, []);
 
   const sanitizeNetworkEntryForExport = useCallback((entry) => {
@@ -538,12 +518,6 @@ export default function App() {
       return next;
     });
 
-    setLatestApiRequestByTab((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-
     setTabHtml((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -615,10 +589,6 @@ export default function App() {
       }));
     }
   }, [activeTool]);
-
-  useEffect(() => {
-    loadNetworkHistory();
-  }, [loadNetworkHistory]);
 
   useEffect(() => {
     let cancelled = false;
@@ -823,6 +793,7 @@ export default function App() {
         method: String(request.method || "GET").toUpperCase(),
         url: String(request.url || ""),
         headers,
+        requestBody: body !== undefined && body !== null ? body : "",
         body: body !== undefined && body !== null ? body : "",
       });
       setActiveTool("api");
@@ -960,15 +931,12 @@ export default function App() {
                   }));
                 }}
                 onExportNetwork={handleExportNetwork}
-                networkHistoryEntries={networkHistoryEntries}
-                onRefreshNetworkHistory={loadNetworkHistory}
                 deviceSim={deviceSim}
                 onDeviceSimChange={setDeviceSim}
                 activeTabTitle={activeTab?.title || ""}
                 activeTabHtml={tabHtml[activeTabId]?.html || ""}
                 activeTabHtmlUpdatedAt={tabHtml[activeTabId]?.updatedAt || null}
                 aiDraft={aiDraft}
-                latestApiRequest={latestApiRequestByTab[activeTabId] || null}
                 apiTesterDraftRequest={apiTesterDraftRequest}
                 activeTabId={activeTabId}
                 activeTabUrl={activeTab?.url || ""}

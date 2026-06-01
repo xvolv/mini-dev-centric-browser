@@ -25,7 +25,6 @@ export default function DevToolsPanel({
   activeTabHtml,
   activeTabHtmlUpdatedAt,
   aiDraft,
-  latestApiRequest,
   apiTesterDraftRequest,
   activeTabId,
   activeTabUrl,
@@ -90,23 +89,9 @@ export default function DevToolsPanel({
             onSendToApiTester={onSendToApiTester}
           />
         );
-      case "network-history":
-        return (
-          <NetworkPanel
-            entries={networkHistoryEntries}
-            onClear={onRefreshNetworkHistory}
-            onExport={onExportNetwork}
-            primaryActionLabel="Refresh"
-            primaryActionTitle="Reload persisted network history"
-            primaryActionIcon="↻"
-            autoPopulateEnabled={autoPopulateNetworkToApiTester}
-            onSendToApiTester={onSendToApiTester}
-          />
-        );
       case "api":
         return (
           <ApiTesterPanel
-            latestRequest={latestApiRequest}
             pendingRequest={apiTesterDraftRequest}
             onConsumePendingRequest={onConsumeApiTesterDraft}
           />

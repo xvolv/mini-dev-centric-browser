@@ -77,6 +77,32 @@ function normalizeHeaders(headers) {
   }, {});
 }
 
+function extractUploadBody(uploadData) {
+  if (!Array.isArray(uploadData) || uploadData.length === 0) return null;
+
+  const parts = uploadData
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      if (Buffer.isBuffer(item.bytes)) {
+        return item.bytes.toString("utf-8");
+      }
+      if (typeof item.bytes === "string") {
+        return item.bytes;
+      }
+      if (item.file) {
+        return `[file:${item.file}]`;
+      }
+      if (item.blobUUID) {
+        return `[blob:${item.blobUUID}]`;
+      }
+      return null;
+    })
+    .filter((part) => part !== null && part !== undefined);
+
+  if (parts.length === 0) return null;
+  return parts.join("");
+}
+
 const SANDBOX_ALLOWED_EXTS = new Set(["html", "htm", "css", "js", "mjs"]);
 
 const shouldSkipSandboxDir = (name) =>
@@ -150,6 +176,8 @@ function getOrCreateNetworkRequest(details) {
     durationMs: null,
     requestHeaders: {},
     responseHeaders: {},
+    requestBody: null,
+    responseBody: null,
     status: null,
     statusCode: null,
     fromCache: false,
@@ -426,13 +454,23 @@ function ensureWebRequestHandlers() {
   const webRequest = session.defaultSession.webRequest;
 
   webRequest.onBeforeRequest((details, callback) => {
-    getOrCreateNetworkRequest(details);
+    const record = getOrCreateNetworkRequest(details);
+    const uploadBody = extractUploadBody(details.uploadData);
+    if (uploadBody !== null) {
+      record.requestBody = uploadBody;
+    }
     callback({});
   });
 
   webRequest.onBeforeSendHeaders((details, callback) => {
     const record = getOrCreateNetworkRequest(details);
     record.requestHeaders = normalizeHeaders(details.requestHeaders);
+    if (record.requestBody == null) {
+      const uploadBody = extractUploadBody(details.uploadData);
+      if (uploadBody !== null) {
+        record.requestBody = uploadBody;
+      }
+    }
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });
 

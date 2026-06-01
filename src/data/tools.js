@@ -1,7 +1,6 @@
 import {
   Terminal,
   RefreshCcw,
-  History,
   Zap,
   Pencil,
   Smartphone,
@@ -14,7 +13,6 @@ import {
 export const TOOLS = [
   { id: 'console', icon: Terminal, label: 'Console' },
   { id: 'network', icon: RefreshCcw, label: 'Network' },
-  { id: 'network-history', icon: History, label: 'Network History' },
   { id: 'api', icon: Zap, label: 'API Tester' },
   { id: 'sandbox', icon: Pencil, label: 'Sandbox' },
   { id: 'device', icon: Smartphone, label: 'Devices' },

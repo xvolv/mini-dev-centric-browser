@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function ApiTesterPanel({
-  latestRequest,
   pendingRequest,
   onConsumePendingRequest,
 }) {
@@ -21,35 +20,22 @@ export default function ApiTesterPanel({
   const [bodyText, setBodyText] = useState("");
   const [response, setResponse] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  const [autoFill, setAutoFill] = useState(true);
-  const [lastAppliedAt, setLastAppliedAt] = useState(null);
-  const [sendViaMain, setSendViaMain] = useState(true);
 
   const allowsBody = useMemo(() => !["GET", "HEAD"].includes(method), [method]);
 
   const applyRequest = useCallback((request) => {
     if (!request) return;
-    if (request.method) setMethod(request.method);
+    if (request.method) setMethod(String(request.method).toUpperCase());
     if (request.url) setUrl(request.url);
     setHeadersText(JSON.stringify(request.headers || {}, null, 2));
     setBodyText(
-      request.body !== undefined && request.body !== null
-        ? String(request.body)
+      request.requestBody !== undefined && request.requestBody !== null
+        ? String(request.requestBody)
+        : request.body !== undefined && request.body !== null
+          ? String(request.body)
         : "",
     );
-    if (request.receivedAt) {
-      setLastAppliedAt(request.receivedAt);
-    } else {
-      setLastAppliedAt(Date.now());
-    }
   }, []);
-
-  useEffect(() => {
-    if (!autoFill || !latestRequest) return;
-    if (latestRequest.receivedAt && latestRequest.receivedAt === lastAppliedAt)
-      return;
-    applyRequest(latestRequest);
-  }, [autoFill, latestRequest, lastAppliedAt, applyRequest]);
 
   useEffect(() => {
     if (!pendingRequest) return;
@@ -98,7 +84,7 @@ export default function ApiTesterPanel({
           }
         }
       }
-      if (sendViaMain && window.electronAPI?.apiSend) {
+      if (window.electronAPI?.apiSend) {
         const res = await window.electronAPI.apiSend({
           method,
           url: finalUrl,
@@ -201,39 +187,6 @@ export default function ApiTesterPanel({
         >
           {isSending ? "Sending..." : "Send"}
         </button>
-      </div>
-      <div className="api-tester__autofill">
-        <label className="api-tester__autofill-toggle">
-          <input
-            type="checkbox"
-            checked={autoFill}
-            onChange={(e) => setAutoFill(e.target.checked)}
-          />
-          Auto-fill from latest request
-        </label>
-        <button
-          className="api-tester__autofill-btn"
-          onClick={() => applyRequest(latestRequest)}
-          disabled={!latestRequest}
-          type="button"
-        >
-          Use last request
-        </button>
-        <div className="api-tester__autofill-meta">
-          {latestRequest
-            ? `${latestRequest.method} ${latestRequest.url}`
-            : "No request captured yet"}
-        </div>
-      </div>
-      <div className="api-tester__send-mode">
-        <label className="api-tester__send-toggle">
-          <input
-            type="checkbox"
-            checked={sendViaMain}
-            onChange={(e) => setSendViaMain(e.target.checked)}
-          />
-          Send via app (no CORS, uses browser cookies)
-        </label>
       </div>
       <div className="api-tester__tabs">
         {["params", "headers", "auth", "body"].map((tab) => (
