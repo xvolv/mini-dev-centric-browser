@@ -290,6 +290,20 @@ export default function SandboxPanel() {
     [folderFiles],
   );
 
+  const activeFolderEntry = useMemo(
+    () => folderFiles.find((entry) => entry.path === activeFolderFile) || null,
+    [activeFolderFile, folderFiles],
+  );
+
+  const updateFolderEntryText = useCallback((path, nextText) => {
+    if (!path) return;
+    setFolderFiles((prev) =>
+      prev.map((entry) =>
+        entry.path === path ? { ...entry, text: String(nextText || "") } : entry,
+      ),
+    );
+  }, []);
+
   const persistState = useCallback(() => {
     persistSandboxState({
       html,
@@ -1147,16 +1161,22 @@ export default function SandboxPanel() {
                     language={getEditorLanguage(activeTab)}
                     path={activeTab}
                     value={
-                      activeTab === "html"
-                        ? html
-                        : activeTab === "css"
-                          ? css
-                          : js
+                      activeFolderEntry
+                        ? activeFolderEntry.text || ""
+                        : activeTab === "html"
+                          ? html
+                          : activeTab === "css"
+                            ? css
+                            : js
                     }
                     onChange={(nextValue) => {
-                      if (activeTab === "html") setHtml(nextValue ?? "");
-                      else if (activeTab === "css") setCss(nextValue ?? "");
-                      else if (activeTab === "js") setJs(nextValue ?? "");
+                      const nextText = nextValue ?? "";
+                      if (activeFolderEntry) {
+                        updateFolderEntryText(activeFolderEntry.path, nextText);
+                      }
+                      if (activeTab === "html") setHtml(nextText);
+                      else if (activeTab === "css") setCss(nextText);
+                      else if (activeTab === "js") setJs(nextText);
                       setStatus("rendering");
                       setStatusMessage("Rendering preview...");
                     }}
