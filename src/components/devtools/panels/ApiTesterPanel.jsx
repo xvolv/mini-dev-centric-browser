@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-export default function ApiTesterPanel({ latestRequest }) {
+export default function ApiTesterPanel({
+  latestRequest,
+  pendingRequest,
+  onConsumePendingRequest,
+}) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState(
     "https://jsonplaceholder.typicode.com/posts/1",
@@ -23,16 +27,16 @@ export default function ApiTesterPanel({ latestRequest }) {
 
   const allowsBody = useMemo(() => !["GET", "HEAD"].includes(method), [method]);
 
-  const applyLatest = useCallback((request) => {
+  const applyRequest = useCallback((request) => {
     if (!request) return;
     if (request.method) setMethod(request.method);
     if (request.url) setUrl(request.url);
-    if (request.headers && Object.keys(request.headers).length > 0) {
-      setHeadersText(JSON.stringify(request.headers, null, 2));
-    }
-    if (request.body !== undefined && request.body !== null) {
-      setBodyText(String(request.body));
-    }
+    setHeadersText(JSON.stringify(request.headers || {}, null, 2));
+    setBodyText(
+      request.body !== undefined && request.body !== null
+        ? String(request.body)
+        : "",
+    );
     if (request.receivedAt) {
       setLastAppliedAt(request.receivedAt);
     } else {
@@ -44,8 +48,14 @@ export default function ApiTesterPanel({ latestRequest }) {
     if (!autoFill || !latestRequest) return;
     if (latestRequest.receivedAt && latestRequest.receivedAt === lastAppliedAt)
       return;
-    applyLatest(latestRequest);
-  }, [autoFill, latestRequest, lastAppliedAt, applyLatest]);
+    applyRequest(latestRequest);
+  }, [autoFill, latestRequest, lastAppliedAt, applyRequest]);
+
+  useEffect(() => {
+    if (!pendingRequest) return;
+    applyRequest(pendingRequest);
+    onConsumePendingRequest?.(pendingRequest.draftId);
+  }, [pendingRequest, applyRequest, onConsumePendingRequest]);
 
   const parseHeaders = () => {
     if (!headersText.trim()) return {};
@@ -203,7 +213,7 @@ export default function ApiTesterPanel({ latestRequest }) {
         </label>
         <button
           className="api-tester__autofill-btn"
-          onClick={() => applyLatest(latestRequest)}
+          onClick={() => applyRequest(latestRequest)}
           disabled={!latestRequest}
           type="button"
         >

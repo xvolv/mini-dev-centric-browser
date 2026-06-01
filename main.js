@@ -311,6 +311,7 @@ function readAiSettings() {
       apiKey: data?.apiKey || "",
       includeActiveTabTitle: data?.includeActiveTabTitle !== false,
       includeActiveTabContent: data?.includeActiveTabContent !== false,
+      autoPopulateNetworkToApiTester: data?.autoPopulateNetworkToApiTester !== false,
     };
   } catch {
     return {
@@ -319,6 +320,7 @@ function readAiSettings() {
       apiKey: "",
       includeActiveTabTitle: true,
       includeActiveTabContent: true,
+      autoPopulateNetworkToApiTester: true,
     };
   }
 }

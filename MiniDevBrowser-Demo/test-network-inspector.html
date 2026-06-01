@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Inspector Test - Full Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px;
+            background: #1e1e1e;
+            color: #fff;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 { color: #4ec9b0; border-bottom: 2px solid #4ec9b0; padding-bottom: 10px; }
+        h2 { color: #ce9178; margin-top: 25px; }
+        h3 { color: #9cdcfe; margin: 15px 0 5px 0; }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 8px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        button:hover { background: #005a9e; transform: scale(1.02); }
+        .section {
+            background: #2d2d2d;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007acc;
+        }
+        .get-section { border-left-color: #4ec9b0; }
+        .post-section { border-left-color: #9cdcfe; }
+        .put-section { border-left-color: #dcdcaa; }
+        .delete-section { border-left-color: #f48771; }
+        .headers-section { border-left-color: #ce9178; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-get { background: #4ec9b0; color: #1e1e1e; }
+        .badge-post { background: #9cdcfe; color: #1e1e1e; }
+        .badge-put { background: #dcdcaa; color: #1e1e1e; }
+        .badge-delete { background: #f48771; color: #1e1e1e; }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid #444;
+            max-height: 200px;
+        }
+        .result-area {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            margin-top: 10px;
+        }
+        .instruction {
+            background: #0d4b6e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        code {
+            background: #1e1e1e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ce9178;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            color: #4ec9b0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🌐 Network Inspector Test Page</h1>
+    <p>Open the <strong>Network Inspector panel</strong> in Mini Dev-Centric Browser to see all HTTP requests captured.</p>
+
+    <div class="instruction">
+        <strong>🎯 WHAT TO DEMO IN NETWORK INSPECTOR:</strong><br>
+        - ✅ All HTTP methods (GET, POST, PUT, DELETE, PATCH) are captured<br>
+        - ✅ Request headers (Authorization, Content-Type, Custom headers)<br>
+        - ✅ Response headers (Server, Cache-Control, Content-Type)<br>
+        - ✅ Request body (for POST/PUT/PATCH requests)<br>
+        - ✅ Response body (JSON formatted)<br>
+        - ✅ Status codes (200, 201, 204, 404)<br>
+        - ✅ Filtering by method, URL, status<br>
+        - ✅ Export network logs
+    </div>
+
+    <!-- GET REQUESTS SECTION -->
+    <div class="section get-section">
+        <h2>📡 GET Requests <span class="badge badge-get">console captured</span></h2>
+        <button onclick="getUsers()">GET /users (All Users)</button>
+        <button onclick="getPost1()">GET /posts/1 (Single Post)</button>
+        <button onclick="getComments()">GET /comments?postId=1 (With Query)</button>
+        <button onclick="getWithCustomHeaders()">GET with Custom Headers</button>
+    </div>
+
+    <!-- POST REQUESTS SECTION -->
+    <div class="section post-section">
+        <h2>📝 POST Requests <span class="badge badge-post">console captured</span></h2>
+        <button onclick="postUser()">POST /users (Create User)</button>
+        <button onclick="postWithAuth()">POST with Bearer Token</button>
+        <button onclick="postWithBody()">POST with Custom JSON</button>
+    </div>
+
+    <!-- PUT REQUESTS SECTION -->
+    <div class="section put-section">
+        <h2>🔄 PUT Requests <span class="badge badge-put">console captured</span></h2>
+        <button onclick="putUser()">PUT /users/1 (Full Update)</button>
+        <button onclick="patchUser()">PATCH /users/1 (Partial Update)</button>
+    </div>
+
+    <!-- DELETE REQUESTS SECTION -->
+    <div class="section delete-section">
+        <h2>🗑️ DELETE Requests <span class="badge badge-delete">console captured</span></h2>
+        <button onclick="deleteUser()">DELETE /users/1</button>
+        <button onclick="deleteWithAuth()">DELETE with Auth Header</button>
+    </div>
+
+    <!-- HEADERS DETAIL SECTION -->
+    <div class="section headers-section">
+        <h2>🔐 Request Headers Demo</h2>
+        <p>These requests include custom headers to inspect in Network Inspector:</p>
+        <table>
+            <tr><th>Header Name</th><th>Example Value</th><th>Purpose</th></tr>
+            <tr><td><code>Authorization</code></td><td>Bearer token123xyz</td><td>Authentication</td></tr>
+            <tr><td><code>X-Custom-Header</code></td><td>DemoValue123</td><td>Custom header</td></tr>
+            <tr><td><code>X-Presentation-ID</code></td><td>MiniDevBrowser-Demo</td><td>Demo identifier</td></tr>
+            <tr><td><code>X-Request-Source</code></td><td>NetworkInspectorTest</td><td>Request source</td></tr>
+            <tr><td><code>X-Debug-Mode</code></td><td>enabled</td><td>Debug flag</td></tr>
+        </table>
+    </div>
+
+    <!-- BATCH REQUESTS -->
+    <div class="section">
+        <h2>🚀 Batch Requests (All Methods)</h2>
+        <button onclick="sendAllMethods()">Send All HTTP Methods (GET, POST, PUT, DELETE)</button>
+        <button onclick="sendSequentialRequests()">Send 5 Sequential Requests</button>
+    </div>
+
+    <!-- ERROR HANDLING -->
+    <div class="section">
+        <h2>❌ Error Handling (404, 500)</h2>
+        <button onclick="get404()">GET /invalid-endpoint (404 Not Found)</button>
+        <button onclick="get500()">GET that returns 500 (if available)</button>
+    </div>
+
+    <!-- RESPONSE VIEWER -->
+    <div class="section">
+        <h2>📊 Response Viewer</h2>
+        <div id="response-area" class="result-area">
+            <i>Click any button - response will appear here and in Network Inspector</i>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://jsonplaceholder.typicode.com';
+
+        // ============ GET REQUESTS ============
+        async function getUsers() {
+            showResponse("🔄 GET /users - Request sent. Check Network Inspector!");
+            try {
+                const response = await fetch(`${API_BASE}/users`);
+                const data = await response.json();
+                showResponse(`✅ GET /users - Status: ${response.status} | Users: ${data.length}`);
+                console.log("GET /users completed. Users count:", data.length);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function getPost1() {
+            showResponse("🔄 GET /posts/1 - Request sent. Check Network Inspector!");
+            try {
+                const response = await fetch(`${API_BASE}/posts/1`);
+                const data = await response.json();
+                showResponse(`✅ GET /posts/1 - Status: ${response.status} | Title: ${data.title.substring(0, 50)}...`);
+                console.log("GET /posts/1 completed:", data.title);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function getComments() {
+            showResponse("🔄 GET /comments?postId=1 - Request sent with query params!");
+            try {
+                const response = await fetch(`${API_BASE}/comments?postId=1`);
+                const data = await response.json();
+                showResponse(`✅ GET /comments - Status: ${response.status} | Comments: ${data.length}`);
+                console.log("GET with query params completed. Comments count:", data.length);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function getWithCustomHeaders() {
+            showResponse("🔄 GET with Custom Headers - Check Network Inspector for headers!");
+            try {
+                const response = await fetch(`${API_BASE}/posts/1`, {
+                    headers: {
+                        'X-Custom-Header': 'DemoValue123',
+                        'X-Presentation-ID': 'MiniDevBrowser-Demo',
+                        'X-Request-Source': 'NetworkInspectorTest',
+                        'X-Debug-Mode': 'enabled'
+                    }
+                });
+                const data = await response.json();
+                showResponse(`✅ GET with custom headers - Status: ${response.status} | Check Network Inspector headers!`);
+                console.log("GET with custom headers - Headers sent:", {
+                    'X-Custom-Header': 'DemoValue123',
+                    'X-Presentation-ID': 'MiniDevBrowser-Demo'
+                });
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        // ============ POST REQUESTS ============
+        async function postUser() {
+            const newUser = {
+                name: "Salhadin Demo User",
+                username: "salhadin_demo",
+                email: "salhadin@demobrowser.com",
+                phone: "1-234-567-8900"
+            };
+            showResponse(`🔄 POST /users - Body: ${JSON.stringify(newUser)}`);
+            try {
+                const response = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newUser)
+                });
+                const data = await response.json();
+                showResponse(`✅ POST /users - Status: ${response.status} | Created ID: ${data.id}`);
+                console.log("POST /users completed. Response:", data);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function postWithAuth() {
+            const fakeToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-token-for-network-inspector";
+            showResponse("🔄 POST with Bearer Token - Check Network Inspector for Authorization header!");
+            try {
+                const response = await fetch(`${API_BASE}/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${fakeToken}`
+                    },
+                    body: JSON.stringify({ title: "Auth Test Post", body: "Testing authorization header", userId: 1 })
+                });
+                const data = await response.json();
+                showResponse(`✅ POST with Bearer Token - Status: ${response.status} | Check Network Inspector headers!`);
+                console.log("POST with Bearer Token - Auth header sent");
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function postWithBody() {
+            const customBody = {
+                title: "Custom Network Inspector Test",
+                body: "This request shows how POST body appears in Network Inspector",
+                userId: 1,
+                tags: ["demo", "presentation", "network-inspector"]
+            };
+            showResponse(`🔄 POST with Custom Body - Check Network Inspector for request body!`);
+            try {
+                const response = await fetch(`${API_BASE}/posts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(customBody)
+                });
+                const data = await response.json();
+                showResponse(`✅ POST with body - Status: ${response.status} | Created ID: ${data.id}`);
+                console.log("POST with custom body completed. Body was:", customBody);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        // ============ PUT & PATCH ============
+        async function putUser() {
+            const updatedUser = {
+                id: 1,
+                name: "Updated Name via PUT",
+                username: "updated_username",
+                email: "updated@demobrowser.com",
+                phone: "1-234-567-9999",
+                website: "updated.org"
+            };
+            showResponse(`🔄 PUT /users/1 - Full update`);
+            try {
+                const response = await fetch(`${API_BASE}/users/1`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedUser)
+                });
+                const data = await response.json();
+                showResponse(`✅ PUT /users/1 - Status: ${response.status} | Updated: ${data.name}`);
+                console.log("PUT /users/1 completed. Updated user:", data);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function patchUser() {
+            const partialUpdate = { name: "Patched Name Only" };
+            showResponse(`🔄 PATCH /users/1 - Partial update`);
+            try {
+                const response = await fetch(`${API_BASE}/users/1`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(partialUpdate)
+                });
+                const data = await response.json();
+                showResponse(`✅ PATCH /users/1 - Status: ${response.status} | Updated name: ${data.name}`);
+                console.log("PATCH /users/1 completed. Patched:", partialUpdate);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        // ============ DELETE ============
+        async function deleteUser() {
+            showResponse(`🔄 DELETE /users/1 - Deleting user...`);
+            try {
+                const response = await fetch(`${API_BASE}/users/1`, {
+                    method: 'DELETE'
+                });
+                showResponse(`✅ DELETE /users/1 - Status: ${response.status} (204 means deleted successfully)`);
+                console.log("DELETE /users/1 completed. Status:", response.status);
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function deleteWithAuth() {
+            showResponse(`🔄 DELETE with Auth Header - Check Network Inspector!`);
+            try {
+                const response = await fetch(`${API_BASE}/posts/1`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer delete-token-demo',
+                        'X-Reason': 'Demo deletion'
+                    }
+                });
+                showResponse(`✅ DELETE with auth - Status: ${response.status}`);
+                console.log("DELETE with auth completed. Headers sent");
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        // ============ BATCH ============
+        async function sendAllMethods() {
+            showResponse("🚀 Sending all HTTP methods - Watch Network Inspector!");
+            
+            await fetch(`${API_BASE}/posts/1`);
+            showResponse("  ✓ GET sent");
+            
+            await fetch(`${API_BASE}/posts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: "Batch Test", body: "test" })
+            });
+            showResponse("  ✓ POST sent");
+            
+            await fetch(`${API_BASE}/posts/1`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: 1, title: "Updated" })
+            });
+            showResponse("  ✓ PUT sent");
+            
+            await fetch(`${API_BASE}/posts/1`, { method: 'DELETE' });
+            showResponse("  ✓ DELETE sent");
+            
+            showResponse("✅ All methods sent! Check Network Inspector to see GET, POST, PUT, DELETE");
+        }
+
+        async function sendSequentialRequests() {
+            for(let i = 1; i <= 5; i++) {
+                showResponse(`🔄 Sending request #${i}...`);
+                await fetch(`${API_BASE}/posts/${i}`);
+                showResponse(`  ✓ Request #${i} complete`);
+            }
+            showResponse("✅ 5 sequential requests completed. Check Network Inspector!");
+        }
+
+        // ============ ERROR HANDLING ============
+        async function get404() {
+            showResponse("🔄 Trying to access invalid endpoint - Should return 404");
+            try {
+                const response = await fetch(`${API_BASE}/invalid-endpoint-12345`);
+                showResponse(`⚠️ Response Status: ${response.status} ${response.statusText} (Expected 404)`);
+                console.warn("404 response received for invalid endpoint");
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        async function get500() {
+            showResponse("🔄 Testing 500 error endpoint");
+            try {
+                // This endpoint is known to sometimes return 500 for invalid IDs
+                const response = await fetch(`${API_BASE}/posts/99999`);
+                if(response.status >= 500) {
+                    showResponse(`⚠️ Server Error: ${response.status}`);
+                } else {
+                    showResponse(`Response Status: ${response.status} (Not 500, API doesn't have 500 test endpoint)`);
+                }
+            } catch(e) {
+                showResponse(`❌ Error: ${e.message}`);
+            }
+        }
+
+        // ============ HELPER ============
+        function showResponse(message) {
+            const area = document.getElementById('response-area');
+            const timestamp = new Date().toLocaleTimeString();
+            area.innerHTML = `<div>[${timestamp}] ${message}</div>` + area.innerHTML;
+            if(area.children.length > 15) {
+                area.removeChild(area.lastChild);
+            }
+        }
+    </script>
+</body>
+</html>

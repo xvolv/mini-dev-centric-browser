@@ -11,22 +11,45 @@ export default function ConsolePanel({ entries = [], onClear }) {
   const [selectedId, setSelectedId] = useState(null);
   const [exporting, setExporting] = useState(false);
 
-  const typeIcons = { log: "●", warn: "⚠", error: "✕", info: "ℹ" };
+  const normalizeType = (type) => {
+    const value = String(type || "log").toLowerCase();
+    if (value === "warn" || value === "warning") return "warn";
+    if (value === "error") return "error";
+    if (value === "info" || value === "log" || value === "verbose") return "info";
+    return "info";
+  };
+
+  const getIcon = (type) => {
+    const normalizedType = normalizeType(type);
+    switch (normalizedType) {
+      case "warn":
+        return "⚠";
+      case "error":
+        return "✕";
+      case "info":
+        return "ℹ";
+      case "log":
+      default:
+        return "●";
+    }
+  };
 
   const counts = useMemo(() => {
     return entries.reduce(
       (acc, item) => {
-        acc[item.type] = (acc[item.type] || 0) + 1;
+        const type = normalizeType(item.type);
+        acc[type] = (acc[type] || 0) + 1;
         return acc;
       },
-      { log: 0, warn: 0, error: 0, info: 0 },
+      { info: 0, warn: 0, error: 0 },
     );
   }, [entries]);
 
   const filtered = useMemo(
     () =>
       entries.filter((m) => {
-        if (filter !== "all" && m.type !== filter) return false;
+        const type = normalizeType(m.type);
+        if (filter !== "all" && type !== filter) return false;
         if (search && !m.text.toLowerCase().includes(search.toLowerCase())) {
           return false;
         }
@@ -124,7 +147,7 @@ export default function ConsolePanel({ entries = [], onClear }) {
   return (
     <div className="tool-panel">
       <div className="console__filters">
-        {['all', 'log', 'warn', 'error', 'info'].map((f) => (
+        {['all', 'info', 'warn', 'error'].map((f) => (
           <button
             key={f}
             className={`console__filter-btn ${filter === f ? "console__filter-btn--active" : ""}`}
@@ -162,15 +185,16 @@ export default function ConsolePanel({ entries = [], onClear }) {
       <div className="console__messages">
         {filtered.map((msg, i) => {
           const id = `${msg.time}-${i}`;
-          const canExplain = msg.type === "error" || msg.type === "warn";
+          const normalizedType = normalizeType(msg.type);
+          const canExplain = normalizedType === "error" || normalizedType === "warn";
           const isSelected = selectedId === id;
           return (
             <div key={id} className="console__msg-wrap">
               <div
-                className={`console__msg console__msg--${msg.type} ${isSelected ? "console__msg--selected" : ""}`}
+                className={`console__msg console__msg--${normalizedType} ${isSelected ? "console__msg--selected" : ""}`}
                 onClick={() => setSelectedId(id)}
               >
-                <span className="console__msg-type">{typeIcons[msg.type]}</span>
+                <span className="console__msg-type">{getIcon(normalizedType)}</span>
                 <span className="console__msg-text">{msg.text}</span>
                 <span className="console__msg-time">{msg.time}</span>
                 {canExplain && isSelected && (

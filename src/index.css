@@ -1531,7 +1531,7 @@ body,
 
 .network__row {
   display: grid;
-  grid-template-columns: 60px 1fr 80px 60px 60px;
+  grid-template-columns: 60px 1fr 80px 60px 60px 140px;
   gap: 8px;
   padding: 5px 12px;
   border-bottom: 1px solid var(--border-muted);
@@ -1557,6 +1557,28 @@ body,
 
 .network__row-header:hover {
   background: transparent;
+}
+
+.network__send-api-btn {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.network__send-api-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+}
+
+.network__send-api-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .network__method {

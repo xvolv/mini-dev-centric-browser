@@ -64,8 +64,11 @@ const loadTabState = () => {
 
 export default function App() {
   const initialTabStateRef = useRef(loadTabState());
-  const { tabs: initialTabs, activeTabId: initialActiveTabId, nextTabId: initialNextTabId } =
-    initialTabStateRef.current;
+  const {
+    tabs: initialTabs,
+    activeTabId: initialActiveTabId,
+    nextTabId: initialNextTabId,
+  } = initialTabStateRef.current;
 
   const [tabs, setTabs] = useState(initialTabs);
   const [activeTabId, setActiveTabId] = useState(initialActiveTabId);
@@ -77,6 +80,10 @@ export default function App() {
   const [networkLogs, setNetworkLogs] = useState({});
   const [networkHistoryEntries, setNetworkHistoryEntries] = useState([]);
   const [latestApiRequestByTab, setLatestApiRequestByTab] = useState({});
+  const [apiTesterDraftRequest, setApiTesterDraftRequest] = useState(null);
+  const [toolSettings, setToolSettings] = useState({
+    autoPopulateNetworkToApiTester: true,
+  });
   const [consoleLogs, setConsoleLogs] = useState({});
   const [bookmarks, setBookmarks] = useState([]);
 
@@ -97,6 +104,8 @@ export default function App() {
   const webContentsToTab = useRef(new Map());
   const recentConsoleKeysRef = useRef(new Map());
   const pendingApiRequestsByTabRef = useRef(new Map());
+  const apiTesterDraftSeqRef = useRef(0);
+  const lastDevToolRef = useRef("console");
 
   const requestAddressBarFocus = useRef(() => {});
 
@@ -139,10 +148,10 @@ export default function App() {
     recentConsoleKeysRef.current.set(key, now);
 
     const levelMap = {
-      0: "log",
-      1: "warn",
-      2: "error",
-      3: "info",
+      0: "info",
+      1: "info",
+      2: "warn",
+      3: "error",
     };
 
     const type = levelMap[entry.level] || "log";
@@ -560,6 +569,21 @@ export default function App() {
       if (e.ctrlKey && (e.key === "w" || e.key === "W")) {
         e.preventDefault();
         if (activeTabId != null) handleCloseTab(activeTabId);
+        return;
+      }
+
+      if (e.key === "F12") {
+        e.preventDefault();
+        setActiveTool((prev) => {
+          if (prev) {
+            if (prev !== "sandbox") {
+              lastDevToolRef.current = prev;
+            }
+            return null;
+          }
+
+          return lastDevToolRef.current || "console";
+        });
       }
     };
 
@@ -569,6 +593,12 @@ export default function App() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [activeTabId]);
+
+  useEffect(() => {
+    if (activeTool && activeTool !== "sandbox") {
+      lastDevToolRef.current = activeTool;
+    }
+  }, [activeTool]);
 
   useEffect(() => {
     if (activeTool === "device") {
@@ -589,6 +619,40 @@ export default function App() {
   useEffect(() => {
     loadNetworkHistory();
   }, [loadNetworkHistory]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadToolSettings = async () => {
+      const res = await window.electronAPI?.aiGetSettings?.();
+      if (cancelled) return;
+      if (res?.ok && res.settings) {
+        setToolSettings({
+          autoPopulateNetworkToApiTester:
+            res.settings.autoPopulateNetworkToApiTester !== false,
+        });
+      }
+    };
+
+    const handleSettingsUpdated = (event) => {
+      const detail = event?.detail || {};
+      setToolSettings({
+        autoPopulateNetworkToApiTester:
+          detail.autoPopulateNetworkToApiTester !== false,
+      });
+    };
+
+    loadToolSettings();
+    window.addEventListener("mini-dev-centric:settings-updated", handleSettingsUpdated);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        "mini-dev-centric:settings-updated",
+        handleSettingsUpdated,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (!window.electronAPI?.onNetworkEvent) return undefined;
@@ -737,6 +801,35 @@ export default function App() {
     refreshBookmarks();
   }, [refreshBookmarks]);
 
+  const handleSendToApiTester = useCallback(
+    (request) => {
+      if (!request || toolSettings.autoPopulateNetworkToApiTester === false) {
+        return;
+      }
+
+      const headers =
+        request.requestHeaders && typeof request.requestHeaders === "object"
+          ? request.requestHeaders
+          : {};
+      const body =
+        request.requestBody !== undefined && request.requestBody !== null
+          ? request.requestBody
+          : request.body;
+
+      const draftId = `${Date.now()}-${++apiTesterDraftSeqRef.current}`;
+
+      setApiTesterDraftRequest({
+        draftId,
+        method: String(request.method || "GET").toUpperCase(),
+        url: String(request.url || ""),
+        headers,
+        body: body !== undefined && body !== null ? body : "",
+      });
+      setActiveTool("api");
+    },
+    [toolSettings.autoPopulateNetworkToApiTester],
+  );
+
   return (
     <div className="app">
       <TitleBar />
@@ -876,6 +969,7 @@ export default function App() {
                 activeTabHtmlUpdatedAt={tabHtml[activeTabId]?.updatedAt || null}
                 aiDraft={aiDraft}
                 latestApiRequest={latestApiRequestByTab[activeTabId] || null}
+                apiTesterDraftRequest={apiTesterDraftRequest}
                 activeTabId={activeTabId}
                 activeTabUrl={activeTab?.url || ""}
                 onDevToolsWebviewReady={(webContentsId, webview) => {
@@ -896,6 +990,15 @@ export default function App() {
                 onDevToolsApiRequest={(payload) => {
                   queuePendingApiRequest(activeTabId, payload);
                   mergeApiRequestDetails(activeTabId, payload);
+                }}
+                autoPopulateNetworkToApiTester={
+                  toolSettings.autoPopulateNetworkToApiTester !== false
+                }
+                onSendToApiTester={handleSendToApiTester}
+                onConsumeApiTesterDraft={(draftId) => {
+                  setApiTesterDraftRequest((current) =>
+                    current?.draftId === draftId ? null : current,
+                  );
                 }}
                 onBookmarkSelect={handleBookmarkSelect}
                 currentTab={{

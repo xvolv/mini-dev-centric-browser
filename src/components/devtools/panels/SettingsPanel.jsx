@@ -13,6 +13,7 @@ export default function SettingsPanel() {
   const [apiKey, setApiKey] = useState("");
   const [includeActiveTabTitle, setIncludeActiveTabTitle] = useState(true);
   const [includeActiveTabContent, setIncludeActiveTabContent] = useState(true);
+  const [autoPopulateNetworkToApiTester, setAutoPopulateNetworkToApiTester] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
@@ -39,6 +40,18 @@ export default function SettingsPanel() {
         setIncludeActiveTabContent(
           res.settings.includeActiveTabContent !== false,
         );
+        setAutoPopulateNetworkToApiTester(
+          res.settings.autoPopulateNetworkToApiTester !== false,
+        );
+        window.dispatchEvent(
+          new CustomEvent("mini-dev-centric:settings-updated", {
+            detail: {
+              ...res.settings,
+              autoPopulateNetworkToApiTester:
+                res.settings.autoPopulateNetworkToApiTester !== false,
+            },
+          }),
+        );
       }
       setLoaded(true);
     };
@@ -53,6 +66,15 @@ export default function SettingsPanel() {
       enabled: aiEnabled,
       includeActiveTabTitle,
       includeActiveTabContent,
+      autoPopulateNetworkToApiTester,
+    })?.then?.((result) => {
+      if (result?.ok && result.settings) {
+        window.dispatchEvent(
+          new CustomEvent("mini-dev-centric:settings-updated", {
+            detail: result.settings,
+          }),
+        );
+      }
     });
   }, [
     apiKey,
@@ -60,6 +82,7 @@ export default function SettingsPanel() {
     aiEnabled,
     includeActiveTabTitle,
     includeActiveTabContent,
+    autoPopulateNetworkToApiTester,
     loaded,
   ]);
 
@@ -98,6 +121,13 @@ export default function SettingsPanel() {
           <button
             className={`settings__toggle ${includeActiveTabContent ? "settings__toggle--on" : ""}`}
             onClick={() => setIncludeActiveTabContent(!includeActiveTabContent)}
+          />
+        </div>
+        <div className="settings__row">
+          <span className="settings__label">Auto-Populate Network to API Tester</span>
+          <button
+            className={`settings__toggle ${autoPopulateNetworkToApiTester ? "settings__toggle--on" : ""}`}
+            onClick={() => setAutoPopulateNetworkToApiTester(!autoPopulateNetworkToApiTester)}
           />
         </div>
         <div className="settings__row">

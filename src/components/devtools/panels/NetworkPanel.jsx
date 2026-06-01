@@ -109,6 +109,8 @@ export default function NetworkPanel({
   primaryActionLabel = "Clear",
   primaryActionTitle = "Clear requests",
   primaryActionIcon = "🗑",
+  autoPopulateEnabled = true,
+  onSendToApiTester,
 }) {
   const [filterText, setFilterText] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
@@ -248,6 +250,12 @@ export default function NetworkPanel({
     await onExport(format, filtered);
   };
 
+  const handleSendToApiTester = (request, event) => {
+    event.stopPropagation();
+    if (!autoPopulateEnabled || typeof onSendToApiTester !== "function") return;
+    onSendToApiTester(request);
+  };
+
   const detailStatus = selectedRequest?.statusCode ?? selectedRequest?.status;
   const requestHeaders = headersToEntries(selectedRequest?.requestHeaders);
   const responseHeaders = headersToEntries(selectedRequest?.responseHeaders);
@@ -355,6 +363,7 @@ export default function NetworkPanel({
               <span>Status</span>
               <span>Size</span>
               <span>Time</span>
+              <span>Action</span>
             </div>
             {filtered.map((req, i) => {
               const rowKey = getRequestKey(req, i);
@@ -372,6 +381,19 @@ export default function NetworkPanel({
                   </span>
                   <span>{formatSize(req.size)}</span>
                   <span>{formatTime(req.durationMs ?? req.timeMs)}</span>
+                  <button
+                    type="button"
+                    className="network__send-api-btn"
+                    onClick={(event) => handleSendToApiTester(req, event)}
+                    disabled={!autoPopulateEnabled}
+                    title={
+                      autoPopulateEnabled
+                        ? "Send this request to API Tester"
+                        : "Enable auto-populate in Settings to use this action"
+                    }
+                  >
+                    Send to API Tester
+                  </button>
                 </div>
               );
             })}
