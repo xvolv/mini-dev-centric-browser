@@ -77,6 +77,60 @@ function normalizeHeaders(headers) {
   }, {});
 }
 
+const SANDBOX_ALLOWED_EXTS = new Set(["html", "htm", "css", "js", "mjs"]);
+
+const shouldSkipSandboxDir = (name) =>
+  ["node_modules", ".git", "dist", "build", "out"].includes(name);
+
+async function collectSandboxFolderEntries(rootDir) {
+  const rootName = path.basename(rootDir || "") || "folder";
+  const entries = [];
+  const stack = [{ dir: rootDir, rel: "" }];
+
+  while (stack.length > 0) {
+    const { dir, rel } = stack.pop();
+    let dirents = [];
+    try {
+      dirents = await fs.promises.readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const dirent of dirents) {
+      const name = dirent.name;
+      if (dirent.isDirectory()) {
+        if (shouldSkipSandboxDir(name)) continue;
+        const nextRel = rel ? `${rel}/${name}` : name;
+        stack.push({ dir: path.join(dir, name), rel: nextRel });
+        continue;
+      }
+      if (!dirent.isFile()) continue;
+
+      const ext = name.includes(".")
+        ? name.split(".").pop()?.toLowerCase()
+        : "";
+      if (!SANDBOX_ALLOWED_EXTS.has(ext)) continue;
+
+      const relPath = rel ? `${rel}/${name}` : name;
+      let text = "";
+      try {
+        text = await fs.promises.readFile(path.join(dir, name), "utf-8");
+      } catch {
+        text = "";
+      }
+
+      entries.push({
+        path: `${rootName}/${relPath}`.replace(/\\/g, "/"),
+        name,
+        ext,
+        text,
+      });
+    }
+  }
+
+  return entries;
+}
+
 function getOrCreateNetworkRequest(details) {
   const requestId = details.id;
   const existing = networkRequests.get(requestId);
@@ -666,6 +720,24 @@ function createWindow() {
       return { ok: true, filePath: result.filePath };
     } catch (error) {
       console.error("Failed to export console logs:", error);
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("sandbox:openFolder", async () => {
+    try {
+      if (!mainWindow) return { ok: false, error: "No window available." };
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ["openDirectory"],
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        return { ok: false, canceled: true };
+      }
+
+      const rootDir = result.filePaths[0];
+      const entries = await collectSandboxFolderEntries(rootDir);
+      return { ok: true, entries };
+    } catch (error) {
       return { ok: false, error: error?.message || String(error) };
     }
   });

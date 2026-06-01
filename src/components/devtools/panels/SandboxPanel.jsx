@@ -58,6 +58,66 @@ const MONACO_OPTIONS = {
   renderWhitespace: "selection",
 };
 
+function buildFolderTree(entries) {
+  const root = { path: "", name: "", type: "folder", children: [] };
+
+  entries.forEach((entry) => {
+    const segments = String(entry.path || "")
+      .split("/")
+      .filter(Boolean);
+    if (segments.length === 0) return;
+    let current = root;
+
+    segments.forEach((segment, index) => {
+      const isFile = index === segments.length - 1;
+      const nextPath = current.path
+        ? `${current.path}/${segment}`
+        : segment;
+
+      if (isFile) {
+        current.children.push({
+          path: nextPath,
+          name: segment,
+          type: "file",
+          entry,
+        });
+        return;
+      }
+
+      let folder = current.children.find(
+        (child) => child.type === "folder" && child.name === segment,
+      );
+      if (!folder) {
+        folder = { path: nextPath, name: segment, type: "folder", children: [] };
+        current.children.push(folder);
+      }
+      current = folder;
+    });
+  });
+
+  const sortNodes = (nodes) => {
+    nodes.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    nodes.forEach((node) => {
+      if (node.type === "folder" && node.children) {
+        sortNodes(node.children);
+      }
+    });
+  };
+
+  sortNodes(root.children);
+  return root.children;
+}
+
+function getFileIcon(ext) {
+  if (ext === "html" || ext === "htm") return "H";
+  if (ext === "css") return "C";
+  if (ext === "js" || ext === "mjs") return "JS";
+  return "F";
+}
+
 function getEditorLanguage(tab) {
   if (tab === "html") return "html";
   if (tab === "css") return "css";
@@ -203,11 +263,32 @@ export default function SandboxPanel() {
   );
   const [renderedCss, setRenderedCss] = useState(stored?.css || DEFAULT_CSS);
   const [renderedJs, setRenderedJs] = useState(stored?.js || DEFAULT_JS);
+  const [previewTitle, setPreviewTitle] = useState("Sandbox Preview");
+  const [previewUrl, setPreviewUrl] = useState("sandbox:///index.html");
   const iframeRef = useRef(null);
   const workspaceRef = useRef(null);
   const renderTimerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
   const dragStateRef = useRef(null);
+  const [folderFiles, setFolderFiles] = useState([]);
+  const [activeFolderFile, setActiveFolderFile] = useState("");
+  const [isFolderDragActive, setIsFolderDragActive] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState(() => new Set());
+  const [newFileName, setNewFileName] = useState("");
+  const [newFileType, setNewFileType] = useState("html");
+
+  const folderRootLabel = useMemo(() => {
+    if (folderFiles.length === 0) return "Folder";
+    const firstPath = String(folderFiles[0].path || "");
+    const root = firstPath.split("/").filter(Boolean)[0];
+    return root || "Folder";
+  }, [folderFiles]);
+
+  const folderTree = useMemo(
+    () => buildFolderTree(folderFiles),
+    [folderFiles],
+  );
 
   const persistState = useCallback(() => {
     persistSandboxState({
@@ -223,6 +304,14 @@ export default function SandboxPanel() {
   useEffect(() => {
     persistState();
   }, [persistState]);
+
+  useEffect(() => {
+    const input = folderInputRef.current;
+    if (!input) return;
+    input.setAttribute("webkitdirectory", "");
+    input.setAttribute("directory", "");
+    input.setAttribute("multiple", "");
+  }, []);
 
   const addLog = useCallback((entry) => {
     setLogs((prev) => [entry, ...prev].slice(0, 200));
@@ -334,7 +423,45 @@ export default function SandboxPanel() {
     if (!root) return;
 
     try {
-      root.innerHTML = String(renderedHtml || "");
+      const htmlText = String(renderedHtml || "");
+      const parser = new DOMParser();
+      const parsed = parser.parseFromString(htmlText, "text/html");
+      const hasDocNodes =
+        parsed.querySelector("html") ||
+        parsed.querySelector("head") ||
+        parsed.querySelector("body");
+      const fileName =
+        activeFolderFile?.split("/").pop() || "index.html";
+      const nextUrl = `sandbox:///${fileName}`;
+      setPreviewUrl(nextUrl);
+
+      if (hasDocNodes) {
+        const title = parsed.title ? String(parsed.title) : "";
+        if (title) {
+          doc.title = title;
+          setPreviewTitle(title);
+        } else {
+          setPreviewTitle(fileName);
+        }
+
+        doc.head
+          .querySelectorAll("[data-sandbox-head]")
+          .forEach((node) => node.remove());
+
+        const allowedHeadTags = new Set(["META", "LINK", "STYLE", "BASE"]);
+        Array.from(parsed.head?.children || []).forEach((node) => {
+          if (!allowedHeadTags.has(node.tagName)) return;
+          const clone = doc.importNode(node, true);
+          clone.setAttribute("data-sandbox-head", "true");
+          doc.head.appendChild(clone);
+        });
+
+        root.innerHTML = String(parsed.body?.innerHTML || "");
+      } else {
+        root.innerHTML = htmlText;
+        setPreviewTitle(fileName);
+      }
+
       installUserStyle();
     } catch (error) {
       renderError(error, "HTML render error");
@@ -445,7 +572,7 @@ export default function SandboxPanel() {
     } catch (error) {
       renderError(error, "JavaScript execution error");
     }
-  }, [renderedHtml, renderedCss, renderedJs]);
+  }, [renderedHtml, renderedCss, renderedJs, activeFolderFile]);
 
   const renderPreview = useCallback(() => {
     setStatus("rendering");
@@ -493,6 +620,111 @@ export default function SandboxPanel() {
     fileInputRef.current?.click();
   };
 
+  const applyFolderEntries = (entries) => {
+    const normalized = Array.isArray(entries) ? entries : [];
+    const supported = normalized.filter((entry) =>
+      ["html", "htm", "css", "js", "mjs"].includes(entry.ext),
+    );
+
+    setFolderFiles(supported);
+    setActiveFolderFile("");
+
+    if (supported.length > 0) {
+      const root = String(supported[0].path || "")
+        .split("/")
+        .filter(Boolean)[0];
+      setExpandedFolders(root ? new Set([root]) : new Set());
+    } else {
+      setExpandedFolders(new Set());
+    }
+
+    const pickFile = (exts, preferredNames) => {
+      const byExt = supported.filter((entry) => exts.includes(entry.ext));
+      if (byExt.length === 0) return null;
+      const preferred = byExt.find((entry) =>
+        preferredNames.some((name) =>
+          entry.name.toLowerCase() === name ||
+          entry.path.toLowerCase().endsWith(`/${name}`),
+        ),
+      );
+      return preferred || byExt[0];
+    };
+
+    const htmlFile = pickFile(["html", "htm"], [
+      "index.html",
+      "main.html",
+      "app.html",
+    ]);
+    const cssFile = pickFile(["css"], [
+      "styles.css",
+      "style.css",
+      "main.css",
+      "app.css",
+      "index.css",
+    ]);
+    const jsFile = pickFile(["js", "mjs"], [
+      "main.js",
+      "app.js",
+      "index.js",
+      "script.js",
+    ]);
+
+    if (htmlFile?.text) setHtml(htmlFile.text);
+    if (cssFile?.text) setCss(cssFile.text);
+    if (jsFile?.text) setJs(jsFile.text);
+
+    if (htmlFile?.text || cssFile?.text || jsFile?.text) {
+      setActiveTab(htmlFile?.text ? "html" : cssFile?.text ? "css" : "js");
+      setStatus("rendering");
+      setStatusMessage("Imported folder, rendering preview...");
+    } else if (supported.length > 0) {
+      setStatus("rendering");
+      setStatusMessage("Folder loaded. Select a file to preview.");
+    } else {
+      setStatus("error");
+      setStatusMessage("Folder imported but no supported files found.");
+    }
+  };
+
+  const handleImportFolderClick = async () => {
+    if (window.electronAPI?.openSandboxFolder) {
+      const result = await window.electronAPI.openSandboxFolder();
+      if (result?.canceled) return;
+      if (!result?.ok) {
+        setStatus("error");
+        setStatusMessage(result?.error || "Failed to open folder.");
+        return;
+      }
+      applyFolderEntries(result?.entries || []);
+      return;
+    }
+    folderInputRef.current?.click();
+  };
+
+  const readFolderFiles = async (fileList) => {
+    const files = Array.from(fileList || []).filter(Boolean);
+    if (files.length === 0) return;
+
+    const entries = await Promise.all(
+      files.map(async (file) => {
+        const path = file.webkitRelativePath || file.name || "";
+        const name = file.name || path.split("/").pop() || "";
+        const ext = name.includes(".")
+          ? name.split(".").pop()?.toLowerCase()
+          : "";
+        let text = "";
+        try {
+          text = await file.text();
+        } catch {
+          text = "";
+        }
+        return { path, name, ext, text };
+      }),
+    );
+
+    applyFolderEntries(entries);
+  };
+
   const handleImportFile = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -529,6 +761,154 @@ export default function SandboxPanel() {
       );
     }
   };
+
+  const handleImportFolder = async (event) => {
+    const files = event.target.files;
+    event.target.value = "";
+    await readFolderFiles(files);
+  };
+
+  const handleFolderDrop = async (event) => {
+    event.preventDefault();
+    setIsFolderDragActive(false);
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    await readFolderFiles(files);
+  };
+
+  const handleFolderDragOver = (event) => {
+    event.preventDefault();
+    setIsFolderDragActive(true);
+  };
+
+  const handleFolderDragLeave = () => {
+    setIsFolderDragActive(false);
+  };
+
+  const handleOpenFolderFile = (entry) => {
+    if (!entry) return;
+    setActiveFolderFile(entry.path);
+
+    if (entry.ext === "html" || entry.ext === "htm") {
+      setHtml(entry.text || "");
+      setActiveTab("html");
+    } else if (entry.ext === "css") {
+      setCss(entry.text || "");
+      setActiveTab("css");
+    } else if (entry.ext === "js" || entry.ext === "mjs") {
+      setJs(entry.text || "");
+      setActiveTab("js");
+    }
+
+    setStatus("rendering");
+    setStatusMessage(`Loaded ${entry.name}`);
+  };
+
+  const clearFolderFiles = () => {
+    setFolderFiles([]);
+    setActiveFolderFile("");
+    setExpandedFolders(new Set());
+  };
+
+  const normalizeFileName = (value, ext) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const sanitized = raw.replace(/[\\:*?"<>|]/g, "-");
+    const hasExt = sanitized.includes(".");
+    if (hasExt) return sanitized;
+    return `${sanitized}.${ext}`;
+  };
+
+  const handleCreateFile = () => {
+    const ext = newFileType || "html";
+    const filename = normalizeFileName(newFileName, ext);
+    if (!filename) return;
+
+    const rootName = folderFiles.length > 0 ? folderRootLabel : "sandbox";
+    const path = `${rootName}/${filename}`;
+    const exists = folderFiles.some(
+      (entry) => entry.path.toLowerCase() === path.toLowerCase(),
+    );
+    if (exists) {
+      setStatus("error");
+      setStatusMessage("File already exists in this folder.");
+      return;
+    }
+
+    const entry = {
+      path,
+      name: filename.split("/").pop() || filename,
+      ext,
+      text: "",
+    };
+
+    setFolderFiles((prev) => [...prev, entry]);
+    setActiveFolderFile(path);
+    setNewFileName("");
+    handleOpenFolderFile(entry);
+  };
+
+  const toggleFolderExpanded = (path) => {
+    if (!path) return;
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const renderTreeNodes = (nodes, depth = 0) =>
+    nodes.map((node) => {
+      if (node.type === "folder") {
+        const isExpanded = expandedFolders.has(node.path);
+        return (
+          <div key={node.path} className="sandbox__tree-group">
+            <button
+              type="button"
+              className="sandbox__tree-item sandbox__tree-folder"
+              onClick={() => toggleFolderExpanded(node.path)}
+              style={{ paddingLeft: `${8 + depth * 14}px` }}
+            >
+              <span className="sandbox__tree-icon">
+                {isExpanded ? "v" : ">"}
+              </span>
+              <span className="sandbox__tree-icon sandbox__tree-icon--folder">
+                [D]
+              </span>
+              <span className="sandbox__tree-name">{node.name}</span>
+            </button>
+            {isExpanded ? (
+              <div className="sandbox__tree-children">
+                {renderTreeNodes(node.children || [], depth + 1)}
+              </div>
+            ) : null}
+          </div>
+        );
+      }
+
+      const isActive = activeFolderFile === node.path;
+      const fileIcon = getFileIcon(node.entry?.ext);
+      const fileClass = node.entry?.ext
+        ? `sandbox__tree-file--${node.entry.ext}`
+        : "";
+      return (
+        <button
+          key={node.path}
+          type="button"
+          className={`sandbox__tree-item sandbox__tree-file ${fileClass} ${isActive ? "sandbox__tree-file--active" : ""}`}
+          onClick={() => handleOpenFolderFile(node.entry)}
+          style={{ paddingLeft: `${24 + depth * 14}px` }}
+          title={node.path}
+        >
+          <span className="sandbox__tree-icon">-</span>
+          <span className="sandbox__tree-icon sandbox__tree-icon--file">
+            {fileIcon}
+          </span>
+          <span className="sandbox__tree-name">{node.name}</span>
+        </button>
+      );
+    });
 
   const updateSplitRatio = useCallback((clientX) => {
     const workspace = workspaceRef.current;
@@ -616,6 +996,13 @@ export default function SandboxPanel() {
           <button type="button" className="btn" onClick={handleImportClick}>
             Import HTML
           </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={handleImportFolderClick}
+          >
+            Import Folder
+          </button>
           <button type="button" className="btn" onClick={handleExportHtml}>
             Export HTML
           </button>
@@ -641,6 +1028,12 @@ export default function SandboxPanel() {
           className="sandbox__file-input"
           onChange={handleImportFile}
         />
+        <input
+          ref={folderInputRef}
+          type="file"
+          className="sandbox__file-input"
+          onChange={handleImportFolder}
+        />
       </div>
 
       <div className="sandbox__workspace" ref={workspaceRef}>
@@ -648,105 +1041,197 @@ export default function SandboxPanel() {
           className="sandbox__left-panel"
           style={{ flexBasis: `${splitRatio}%` }}
         >
-          {["html", "css", "js"].includes(activeTab) && (
-            <div className="sandbox__editor-shell">
-              <div className="sandbox__editor-heading">
-                <span>
-                  {activeTab === "html"
-                    ? "HTML"
-                    : activeTab === "css"
-                      ? "CSS"
-                      : "JavaScript"}
-                </span>
-                <span className="sandbox__editor-caption">Active editor</span>
+          <aside
+            className="sandbox__explorer"
+            onDrop={handleFolderDrop}
+            onDragOver={handleFolderDragOver}
+            onDragLeave={handleFolderDragLeave}
+          >
+            <div className="sandbox__explorer-header">
+              <span className="sandbox__explorer-title">Explorer</span>
+              <div className="sandbox__explorer-actions">
+                <button
+                  type="button"
+                  className="btn sandbox__explorer-btn sandbox__icon-btn"
+                  onClick={handleImportFolderClick}
+                  title="Open Folder"
+                  aria-label="Open Folder"
+                >
+                  <span className="sandbox__btn-icon">+</span>
+                  <span className="sandbox__btn-text">Open</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn sandbox__explorer-btn sandbox__icon-btn"
+                  onClick={handleExportAll}
+                  title="Save All"
+                  aria-label="Save All"
+                >
+                  <span className="sandbox__btn-icon">S</span>
+                  <span className="sandbox__btn-text">Save</span>
+                </button>
+                {folderFiles.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn sandbox__explorer-btn sandbox__icon-btn"
+                    onClick={clearFolderFiles}
+                    title="Clear Folder"
+                    aria-label="Clear Folder"
+                  >
+                    <span className="sandbox__btn-icon">X</span>
+                    <span className="sandbox__btn-text">Clear</span>
+                  </button>
+                ) : null}
               </div>
-              <div className="sandbox__monaco-shell">
-                <Editor
-                  className="sandbox__monaco"
-                  theme="vs-dark"
-                  language={getEditorLanguage(activeTab)}
-                  path={activeTab}
-                  value={
-                    activeTab === "html"
-                      ? html
-                      : activeTab === "css"
-                        ? css
-                        : js
-                  }
-                  onChange={(nextValue) => {
-                    if (activeTab === "html") setHtml(nextValue ?? "");
-                    else if (activeTab === "css") setCss(nextValue ?? "");
-                    else if (activeTab === "js") setJs(nextValue ?? "");
-                    setStatus("rendering");
-                    setStatusMessage("Rendering preview...");
-                  }}
-                  options={MONACO_OPTIONS}
-                  loading={<div style={{ padding: "1rem", color: "#8b949e" }}>Loading Editor...</div>}
+            </div>
+            <div className="sandbox__explorer-body">
+              <div className="sandbox__explorer-create">
+                <input
+                  className="sandbox__explorer-input"
+                  type="text"
+                  value={newFileName}
+                  onChange={(event) => setNewFileName(event.target.value)}
+                  placeholder="New file name"
                 />
+                <select
+                  className="sandbox__explorer-select"
+                  value={newFileType}
+                  onChange={(event) => setNewFileType(event.target.value)}
+                >
+                  <option value="html">HTML</option>
+                  <option value="css">CSS</option>
+                  <option value="js">JS</option>
+                </select>
+                <button
+                  type="button"
+                  className="btn sandbox__explorer-btn sandbox__icon-btn"
+                  onClick={handleCreateFile}
+                  disabled={!newFileName.trim()}
+                >
+                  <span className="sandbox__btn-icon">+</span>
+                  <span className="sandbox__btn-text">Create</span>
+                </button>
               </div>
+              {folderFiles.length === 0 ? (
+                <div
+                  className={`sandbox__explorer-empty ${isFolderDragActive ? "sandbox__explorer-empty--active" : ""}`}
+                >
+                  Drop a folder here to load HTML, CSS, and JS files.
+                </div>
+              ) : (
+                <div className="sandbox__tree">
+                  <div className="sandbox__tree-root">{folderRootLabel}</div>
+                  {renderTreeNodes(folderTree)}
+                </div>
+              )}
             </div>
-          )}
+          </aside>
 
-          {activeTab === "console" && (
-            <div className="sandbox__console-shell">
-              <div className="sandbox__editor-heading">
-                <span>Console</span>
-                <span className="sandbox__editor-caption">
-                  {logs.length} log{logs.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div className="sandbox__console-list">
-                {logs.length === 0 ? (
-                  <div className="sandbox__empty-state">
-                    Console output will appear here when the sandbox runs.
-                  </div>
-                ) : (
-                  logs.map((entry, index) => (
-                    <div
-                      key={`${entry.timestamp}-${index}`}
-                      className={`sandbox__console-item sandbox__console-item--${entry.type}`}
-                    >
-                      <div className="sandbox__console-meta">
-                        <span className="sandbox__console-type">
-                          {entry.type}
-                        </span>
-                        {showConsoleTimestamps ? (
-                          <span className="sandbox__console-time">
-                            {formatTimestamp(entry.timestamp)}
-                          </span>
-                        ) : null}
+          <div className="sandbox__left-content">
+            {["html", "css", "js"].includes(activeTab) && (
+              <div className="sandbox__editor-shell">
+                <div className="sandbox__editor-heading">
+                  <span>
+                    {activeTab === "html"
+                      ? "HTML"
+                      : activeTab === "css"
+                        ? "CSS"
+                        : "JavaScript"}
+                  </span>
+                  <span className="sandbox__editor-caption">Active editor</span>
+                </div>
+                <div className="sandbox__monaco-shell">
+                  <Editor
+                    className="sandbox__monaco"
+                    theme="vs-dark"
+                    language={getEditorLanguage(activeTab)}
+                    path={activeTab}
+                    value={
+                      activeTab === "html"
+                        ? html
+                        : activeTab === "css"
+                          ? css
+                          : js
+                    }
+                    onChange={(nextValue) => {
+                      if (activeTab === "html") setHtml(nextValue ?? "");
+                      else if (activeTab === "css") setCss(nextValue ?? "");
+                      else if (activeTab === "js") setJs(nextValue ?? "");
+                      setStatus("rendering");
+                      setStatusMessage("Rendering preview...");
+                    }}
+                    options={MONACO_OPTIONS}
+                    loading={
+                      <div style={{ padding: "1rem", color: "#8b949e" }}>
+                        Loading Editor...
                       </div>
-                      <pre className="sandbox__console-message">
-                        {entry.message}
-                      </pre>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "settings" && (
-            <div className="sandbox__settings-shell">
-              <div className="sandbox__editor-heading">
-                <span>Settings</span>
-                <span className="sandbox__editor-caption">Placeholder</span>
-              </div>
-              <div className="sandbox__settings-card">
-                <label className="sandbox__setting-row">
-                  <input
-                    type="checkbox"
-                    checked={showConsoleTimestamps}
-                    onChange={(e) => setShowConsoleTimestamps(e.target.checked)}
+                    }
                   />
-                  Show console timestamps
-                </label>
-                <div className="sandbox__setting-note">
-                  Sandbox state is saved locally in this browser.
                 </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {activeTab === "console" && (
+              <div className="sandbox__console-shell">
+                <div className="sandbox__editor-heading">
+                  <span>Console</span>
+                  <span className="sandbox__editor-caption">
+                    {logs.length} log{logs.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="sandbox__console-list">
+                  {logs.length === 0 ? (
+                    <div className="sandbox__empty-state">
+                      Console output will appear here when the sandbox runs.
+                    </div>
+                  ) : (
+                    logs.map((entry, index) => (
+                      <div
+                        key={`${entry.timestamp}-${index}`}
+                        className={`sandbox__console-item sandbox__console-item--${entry.type}`}
+                      >
+                        <div className="sandbox__console-meta">
+                          <span className="sandbox__console-type">
+                            {entry.type}
+                          </span>
+                          {showConsoleTimestamps ? (
+                            <span className="sandbox__console-time">
+                              {formatTimestamp(entry.timestamp)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <pre className="sandbox__console-message">
+                          {entry.message}
+                        </pre>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "settings" && (
+              <div className="sandbox__settings-shell">
+                <div className="sandbox__editor-heading">
+                  <span>Settings</span>
+                  <span className="sandbox__editor-caption">Placeholder</span>
+                </div>
+                <div className="sandbox__settings-card">
+                  <label className="sandbox__setting-row">
+                    <input
+                      type="checkbox"
+                      checked={showConsoleTimestamps}
+                      onChange={(e) => setShowConsoleTimestamps(e.target.checked)}
+                    />
+                    Show console timestamps
+                  </label>
+                  <div className="sandbox__setting-note">
+                    Sandbox state is saved locally in this browser.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
         <div
@@ -772,6 +1257,12 @@ export default function SandboxPanel() {
           <div className="sandbox__preview-heading">
             <span>Preview</span>
             <span className="sandbox__preview-caption">Live iframe render</span>
+          </div>
+          <div className="sandbox__preview-bar">
+            <div className="sandbox__preview-meta">
+              <span className="sandbox__preview-title">{previewTitle}</span>
+              <span className="sandbox__preview-url">{previewUrl}</span>
+            </div>
           </div>
           <iframe
             ref={iframeRef}
