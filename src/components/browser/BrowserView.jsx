@@ -391,12 +391,13 @@ export default function BrowserView({
   ]);
 
   // Render multi-pane view when multi-pane mode is enabled
-  if (deviceSim?.enabled && deviceSim?.multiPane) {
+  if (deviceSim?.enabled && deviceSim?.mode === "multi") {
     return (
       <div className="browser-view">
         {hasActiveUrl ? (
           <MultiPaneView
             url={activeTab.url}
+            devices={deviceSim.multiDevices}
             onUrlFallback={(fallbackUrl) => {
               onUrlUpdate?.(fallbackUrl);
             }}

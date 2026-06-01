@@ -88,12 +88,13 @@ export default function App() {
 
   const [deviceSim, setDeviceSim] = useState({
     enabled: false,
+    mode: "single",
     deviceName: "iPhone 12",
     width: 390,
     height: 844,
     orientation: "portrait",
-    multiPane: false,
     zoom: "fit",
+    multiDevices: ["iPhone 12", "Desktop"],
   });
 
   const [tabHtml, setTabHtml] = useState({});
