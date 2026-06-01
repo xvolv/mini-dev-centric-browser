@@ -1,0 +1,6 @@
+ignoredBuiltDependencies:
+  - better-sqlite3
+  - electron
+  - esbuild
+  - lzma-native
+  - sharp
