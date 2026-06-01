@@ -22,6 +22,7 @@ export default function TitleBar() {
           alt="Mini Dev-Centric"
         />
       </div>
+      <div className="titlebar__title">Mini - Dev Centric Browser</div>
       <div className="titlebar__spacer" />
       <div className="titlebar__controls">
         <button
