@@ -89,11 +89,13 @@ export default function App() {
 
   const [deviceSim, setDeviceSim] = useState({
     enabled: false,
+    mode: "single",
     deviceName: "iPhone 12",
     width: 390,
     height: 844,
     orientation: "portrait",
-    multiPane: false,
+    zoom: "fit",
+    multiDevices: ["iPhone 12", "Desktop"],
   });
 
   const [tabHtml, setTabHtml] = useState({});
@@ -594,13 +596,11 @@ export default function App() {
       setDeviceSim((prev) => ({
         ...prev,
         enabled: true,
-        multiPane: true,
       }));
     } else {
       setDeviceSim((prev) => ({
         ...prev,
         enabled: false,
-        multiPane: false,
       }));
     }
   }, [activeTool]);
@@ -927,7 +927,7 @@ export default function App() {
               }}
             />
 
-            {activeTool && activeTool !== "device" && (
+            {activeTool && (
               <DevToolsPanel
                 activeTool={activeTool}
                 onToolChange={setActiveTool}

@@ -259,6 +259,13 @@ export default function BrowserView({
         setScale(1);
         return;
       }
+      if (deviceSim?.zoom && deviceSim.zoom !== "fit") {
+        const customZoom = Number(deviceSim.zoom);
+        if (Number.isFinite(customZoom) && customZoom > 0) {
+          setScale(customZoom);
+          return;
+        }
+      }
       const rect = container.getBoundingClientRect();
       const maxW = Math.max(0, rect.width - 24);
       const maxH = Math.max(0, rect.height - 24);
@@ -270,7 +277,7 @@ export default function BrowserView({
     const observer = new ResizeObserver(updateScale);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [viewport]);
+  }, [viewport, deviceSim?.zoom]);
 
   useEffect(() => {
     const webview = webviewRefs.current[activeTabId];
@@ -384,12 +391,13 @@ export default function BrowserView({
   ]);
 
   // Render multi-pane view when multi-pane mode is enabled
-  if (deviceSim?.enabled && deviceSim?.multiPane) {
+  if (deviceSim?.enabled && deviceSim?.mode === "multi") {
     return (
       <div className="browser-view">
         {hasActiveUrl ? (
           <MultiPaneView
             url={activeTab.url}
+            devices={deviceSim.multiDevices}
             onUrlFallback={(fallbackUrl) => {
               onUrlUpdate?.(fallbackUrl);
             }}
@@ -430,15 +438,16 @@ export default function BrowserView({
     <div className="browser-view" ref={containerRef}>
       {viewport ? (
         <div className="browser-view__device-stage">
-          <div
-            className="browser-view__device-outer"
-            style={{
-              width: viewport.width * scale,
-              height: viewport.height * scale,
-            }}
-          >
+          <div className="browser-view__device-stage-inner">
             <div
-              className="browser-view__device-frame"
+              className="browser-view__device-outer"
+              style={{
+                width: viewport.width * scale,
+                height: viewport.height * scale,
+              }}
+            >
+              <div
+                className="browser-view__device-frame"
               style={{
                 width: viewport.width,
                 height: viewport.height,
@@ -467,6 +476,7 @@ export default function BrowserView({
                 />
               ))}
             </div>
+          </div>
           </div>
         </div>
       ) : (
