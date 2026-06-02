@@ -3,6 +3,7 @@ import { DEVICE_PRESETS } from "../../data/devicePresets";
 
 export default function MultiPaneView({
   url,
+  devices,
   onWebviewReady,
   onConsoleMessage,
   onApiRequest,
@@ -78,14 +79,12 @@ export default function MultiPaneView({
     }
   };
 
-  // Default devices for multi-pane: mobile and laptop (two panes)
-  const defaultDevices = [
-    DEVICE_PRESETS.find((d) => d.name === "iPhone 12") || DEVICE_PRESETS[0],
-    DEVICE_PRESETS.find((d) => d.name === "Laptop") || DEVICE_PRESETS[6],
-  ];
+  const activeDevices = (devices || ["iPhone 12", "Laptop"]).map(
+    (name) => DEVICE_PRESETS.find((d) => d.name === name) || DEVICE_PRESETS[0]
+  );
 
-  // Pane weights: make the laptop pane larger so it has more space [mobile, laptop]
-  const weights = [0.85, 2.65];
+  // Proportional weights based on device width to share space fairly
+  const weights = activeDevices.map((d) => d.w);
 
   // Calculate scales for each pane to fit in container
   useEffect(() => {
@@ -100,11 +99,11 @@ export default function MultiPaneView({
       const availableHeight = containerRect.height - padding * 2;
       const totalWeight = weights.reduce((s, w) => s + w, 0);
 
-      const baseAvailable = availableWidth - gap * (defaultDevices.length - 1);
+      const baseAvailable = availableWidth - gap * (activeDevices.length - 1);
 
       const newScales = {};
       const newWidths = {};
-      defaultDevices.forEach((device, index) => {
+      activeDevices.forEach((device, index) => {
         const paneWidth = (baseAvailable * weights[index]) / totalWeight;
         newWidths[index] = paneWidth;
         const maxScaleW = paneWidth / device.w;
@@ -122,7 +121,7 @@ export default function MultiPaneView({
     const observer = new ResizeObserver(updateScales);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [defaultDevices]);
+  }, [JSON.stringify(activeDevices)]);
 
   // Each pane scrolls independently — no synchronization
 
@@ -236,7 +235,7 @@ export default function MultiPaneView({
 
   return (
     <div className="multi-pane-view" ref={containerRef}>
-      {defaultDevices.map((device, index) => {
+      {activeDevices.map((device, index) => {
         const scale = scales[index] || 1;
         const weight = weights[index] || 1;
         return (
