@@ -550,23 +550,59 @@ export default function SandboxPanel() {
       const iframe = iframeRef.current;
       const iframeWindow = iframe?.contentWindow;
       if (iframeWindow) {
+        // Temporarily intercept console methods to capture output directly
+        const origLog = iframeWindow.console.log;
+        const origWarn = iframeWindow.console.warn;
+        const origError = iframeWindow.console.error;
+        const captured = [];
+
+        const serialize = (...args) => args.map((item) => {
+          if (typeof item === 'string') return item;
+          try { return JSON.stringify(item, null, 2); } catch { return String(item); }
+        }).join(' ');
+
+        iframeWindow.console.log = (...args) => {
+          captured.push({ type: 'log', message: serialize(...args) });
+          origLog.apply(iframeWindow.console, args);
+        };
+        iframeWindow.console.warn = (...args) => {
+          captured.push({ type: 'warn', message: serialize(...args) });
+          origWarn.apply(iframeWindow.console, args);
+        };
+        iframeWindow.console.error = (...args) => {
+          captured.push({ type: 'error', message: serialize(...args) });
+          origError.apply(iframeWindow.console, args);
+        };
+
         const result = iframeWindow.eval(code);
-        let text;
-        if (result === undefined) text = 'undefined';
-        else if (result === null) text = 'null';
-        else if (typeof result === 'string') text = `'${result}'`;
-        else if (typeof result === 'object') {
-          try { text = JSON.stringify(result, null, 2); } 
-          catch { text = String(result); }
-        } else {
-          text = String(result);
-        }
-        
-        addLog({
-          type: 'log',
-          message: `< ${text}`,
-          timestamp: Date.now(),
+
+        // Restore original methods
+        iframeWindow.console.log = origLog;
+        iframeWindow.console.warn = origWarn;
+        iframeWindow.console.error = origError;
+
+        // Show captured console output
+        captured.forEach((entry) => {
+          addLog({ ...entry, timestamp: Date.now() });
         });
+
+        // Only show return value if it's not undefined (matches Chrome DevTools)
+        if (result !== undefined) {
+          let text;
+          if (result === null) text = 'null';
+          else if (typeof result === 'string') text = `'${result}'`;
+          else if (typeof result === 'object') {
+            try { text = JSON.stringify(result, null, 2); }
+            catch { text = String(result); }
+          } else {
+            text = String(result);
+          }
+          addLog({
+            type: 'log',
+            message: `← ${text}`,
+            timestamp: Date.now(),
+          });
+        }
       }
     } catch (err) {
       addLog({
