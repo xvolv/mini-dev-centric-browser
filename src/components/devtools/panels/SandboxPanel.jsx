@@ -1244,7 +1244,8 @@ export default function SandboxPanel() {
           className="sandbox__left-panel"
           style={{ flexBasis: `${splitRatio}%` }}
         >
-          <div className="sandbox__git-card">
+          {/*
+           <div className="sandbox__git-card">
             <div className="sandbox__git-card-header">
               <div>
                 <div className="sandbox__git-card-title">Git</div>
@@ -1358,6 +1359,8 @@ export default function SandboxPanel() {
               <div className="sandbox__git-caption">{deviceStatus}</div>
             )}
           </div>
+          */}
+         
 
           <aside
             className="sandbox__explorer"
