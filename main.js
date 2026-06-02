@@ -776,7 +776,7 @@ function createWindow() {
 
       const rootDir = result.filePaths[0];
       const entries = await collectSandboxFolderEntries(rootDir);
-      return { ok: true, entries };
+      return { ok: true, folderPath: rootDir, entries };
     } catch (error) {
       return { ok: false, error: error?.message || String(error) };
     }
