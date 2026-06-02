@@ -18,53 +18,12 @@
             line-height: 1.5;
         }
 
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-            border-bottom: 1px solid #2a2a2a;
-            padding: 24px 32px;
-        }
-
-        .header h1 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .header h1 span {
-            color: #3b82f6;
-        }
-
-        .header p {
-            color: #888;
-            margin-top: 8px;
-            font-size: 0.875rem;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: #0d4b6e;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            margin-top: 12px;
-        }
-
-        .status-badge.success {
-            background: #0a2e1a;
-            color: #4ade80;
-        }
-
-        /* Container */
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 32px;
         }
 
-        /* Grid */
         .grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -78,7 +37,6 @@
             }
         }
 
-        /* Cards */
         .card {
             background: #111;
             border: 1px solid #2a2a2a;
@@ -92,12 +50,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
         }
 
         .card-header h2 {
-            font-size: 1.125rem;
+            font-size: 1rem;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -105,11 +61,10 @@
         }
 
         .method-badge {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             padding: 4px 10px;
             border-radius: 20px;
             font-weight: 600;
-            letter-spacing: 0.3px;
         }
 
         .method-get { background: #0d4b6e; color: #7dd3fc; }
@@ -133,7 +88,7 @@
             color: #e0e0e0;
             padding: 8px 16px;
             border-radius: 8px;
-            font-size: 0.8125rem;
+            font-size: 0.75rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -144,141 +99,23 @@
             border-color: #4a4a4a;
             transform: translateY(-1px);
         }
-
-        button.get:hover { border-color: #7dd3fc; }
-        button.post:hover { border-color: #93c5fd; }
-        button.put:hover { border-color: #fbbf24; }
-        button.delete:hover { border-color: #f87171; }
-
-        /* Info Panel */
-        .info-panel {
-            background: #0d1a2a;
-            border: 1px solid #1e3a5f;
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .info-panel p {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .info-icon {
-            font-size: 1.25rem;
-        }
-
-        /* Response Panel */
-        .response-panel {
-            background: #111;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-        }
-
-        .response-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid #2a2a2a;
-            font-weight: 600;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #888;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .response-content {
-            padding: 16px 20px;
-            max-height: 250px;
-            overflow-y: auto;
-            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
-            font-size: 0.75rem;
-            background: #0a0a0a;
-        }
-
-        .response-entry {
-            padding: 8px 0;
-            border-bottom: 1px solid #1a1a1a;
-            color: #aaa;
-        }
-
-        .response-entry:last-child {
-            border-bottom: none;
-        }
-
-        .response-time {
-            color: #555;
-            margin-right: 12px;
-        }
-
-        .response-success {
-            color: #4ade80;
-        }
-
-        .response-error {
-            color: #f87171;
-        }
-
-        /* Endpoint display */
-        .endpoint {
-            background: #0a0a0a;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.7rem;
-            color: #888;
-        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>Mini Dev Browser · <span>API Test Suite</span></h1>
-        <p>Local Express Server — No CORS — Full request/response capture</p>
-        <div class="status-badge success">
-            <span>●</span> Server: http://localhost:3000
-        </div>
-    </div>
-
     <div class="container">
-
-        <!-- Info Panel -->
-        <div class="info-panel">
-            <p>
-                <span class="info-icon">✅</span>
-                <span>Same-origin API calls</span>
-                <span class="endpoint">GET → /api/users</span>
-                <span class="endpoint">POST → /api/users</span>
-                <span class="endpoint">PUT → /api/users/:id</span>
-                <span class="endpoint">DELETE → /api/users/:id</span>
-            </p>
-            <p>
-                <span class="info-icon">📡</span>
-                <span>Request bodies captured by Network Inspector</span>
-            </p>
-        </div>
-
-        <!-- Main Grid -->
         <div class="grid">
             
             <!-- GET Card -->
             <div class="card">
                 <div class="card-header">
                     <h2>📡 <span style="color: #7dd3fc;">GET</span></h2>
-                    <span class="method-badge method-get">Retrieve Data</span>
+                    <span class="method-badge method-get">Retrieve</span>
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button class="get" onclick="getUsers()">GET /api/users</button>
-                        <button class="get" onclick="getUserById()">GET /api/users/1</button>
+                        <button onclick="getUsers()">GET /api/users</button>
+                        <button onclick="getUserById()">GET /api/users/1</button>
                     </div>
                 </div>
             </div>
@@ -287,11 +124,11 @@
             <div class="card">
                 <div class="card-header">
                     <h2>📝 <span style="color: #93c5fd;">POST</span></h2>
-                    <span class="method-badge method-post">Create Resource</span>
+                    <span class="method-badge method-post">Create</span>
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button class="post" onclick="createUser()">POST /api/users (with JSON body)</button>
+                        <button onclick="createUser()">POST /api/users</button>
                     </div>
                 </div>
             </div>
@@ -300,11 +137,11 @@
             <div class="card">
                 <div class="card-header">
                     <h2>🔄 <span style="color: #fbbf24;">PUT</span></h2>
-                    <span class="method-badge method-put">Update Resource</span>
+                    <span class="method-badge method-put">Update</span>
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button class="put" onclick="updateUser()">PUT /api/users/1 (with body)</button>
+                        <button onclick="updateUser()">PUT /api/users/1</button>
                     </div>
                 </div>
             </div>
@@ -313,74 +150,39 @@
             <div class="card">
                 <div class="card-header">
                     <h2>🗑️ <span style="color: #f87171;">DELETE</span></h2>
-                    <span class="method-badge method-delete">Remove Resource</span>
+                    <span class="method-badge method-delete">Remove</span>
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button class="delete" onclick="deleteUser()">DELETE /api/users/1</button>
+                        <button onclick="deleteUser()">DELETE /api/users/1</button>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Response Panel -->
-        <div class="response-panel">
-            <div class="response-header">
-                <span>📋 Response Log</span>
-                <button onclick="clearResponse()" style="padding: 4px 12px; font-size: 0.7rem;">Clear</button>
-            </div>
-            <div class="response-content" id="responseLog">
-                <div class="response-entry">● Ready — Click any endpoint to test</div>
-            </div>
-        </div>
-
     </div>
 
     <script>
         const API_BASE = 'http://localhost:3000/api';
 
-        function addResponse(message, isError = false) {
-            const container = document.getElementById('responseLog');
-            const entry = document.createElement('div');
-            entry.className = 'response-entry';
-            const timestamp = new Date().toLocaleTimeString();
-            const statusClass = isError ? 'response-error' : 'response-success';
-            entry.innerHTML = `<span class="response-time">${timestamp}</span> <span class="${statusClass}">${isError ? '❌' : '✓'}</span> ${message}`;
-            container.insertBefore(entry, container.firstChild);
-            
-            while(container.children.length > 20) {
-                container.removeChild(container.lastChild);
-            }
-        }
-
-        function clearResponse() {
-            const container = document.getElementById('responseLog');
-            container.innerHTML = '<div class="response-entry">● Log cleared</div>';
-        }
-
         // ============ GET ============
         async function getUsers() {
-            addResponse('→ GET /api/users');
             try {
                 const response = await fetch(`${API_BASE}/users`);
                 const data = await response.json();
-                addResponse(`✓ GET /users → Status: ${response.status} | Users: ${data.length}`);
                 console.log('GET /users response:', data);
             } catch(e) {
-                addResponse(`✗ GET /users failed: ${e.message}`, true);
+                console.error('GET /users failed:', e.message);
             }
         }
 
         async function getUserById() {
-            addResponse('→ GET /api/users/1');
             try {
                 const response = await fetch(`${API_BASE}/users/1`);
-                if(!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                addResponse(`✓ GET /users/1 → Status: ${response.status} | Name: ${data.name}`);
                 console.log('GET /users/1 response:', data);
             } catch(e) {
-                addResponse(`✗ GET /users/1 failed: ${e.message}`, true);
+                console.error('GET /users/1 failed:', e.message);
             }
         }
 
@@ -392,7 +194,6 @@
                 email: "salhadin@demobrowser.com",
                 phone: "1-234-567-8900"
             };
-            addResponse(`→ POST /api/users | Body: ${JSON.stringify(newUser)}`);
             try {
                 const response = await fetch(`${API_BASE}/users`, {
                     method: 'POST',
@@ -400,10 +201,9 @@
                     body: JSON.stringify(newUser)
                 });
                 const data = await response.json();
-                addResponse(`✓ POST /users → Status: ${response.status} | Created ID: ${data.id}`);
                 console.log('POST /users response:', data);
             } catch(e) {
-                addResponse(`✗ POST /users failed: ${e.message}`, true);
+                console.error('POST /users failed:', e.message);
             }
         }
 
@@ -413,7 +213,6 @@
                 name: "Updated Name via PUT",
                 email: "updated@demobrowser.com"
             };
-            addResponse(`→ PUT /api/users/1 | Body: ${JSON.stringify(updatedUser)}`);
             try {
                 const response = await fetch(`${API_BASE}/users/1`, {
                     method: 'PUT',
@@ -421,24 +220,21 @@
                     body: JSON.stringify(updatedUser)
                 });
                 const data = await response.json();
-                addResponse(`✓ PUT /users/1 → Status: ${response.status} | Updated`);
                 console.log('PUT /users/1 response:', data);
             } catch(e) {
-                addResponse(`✗ PUT /users/1 failed: ${e.message}`, true);
+                console.error('PUT /users/1 failed:', e.message);
             }
         }
 
         // ============ DELETE ============
         async function deleteUser() {
-            addResponse('→ DELETE /api/users/1');
             try {
                 const response = await fetch(`${API_BASE}/users/1`, {
                     method: 'DELETE'
                 });
-                addResponse(`✓ DELETE /users/1 → Status: ${response.status} (Deleted)`);
-                console.log('DELETE /users/1 completed');
+                console.log('DELETE /users/1 completed. Status:', response.status);
             } catch(e) {
-                addResponse(`✗ DELETE /users/1 failed: ${e.message}`, true);
+                console.error('DELETE /users/1 failed:', e.message);
             }
         }
     </script>

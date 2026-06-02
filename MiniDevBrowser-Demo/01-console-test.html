@@ -18,37 +18,12 @@
             line-height: 1.5;
         }
 
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-            border-bottom: 1px solid #2a2a2a;
-            padding: 24px 32px;
-        }
-
-        .header h1 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .header h1 span {
-            color: #3b82f6;
-        }
-
-        .header p {
-            color: #888;
-            margin-top: 8px;
-            font-size: 0.875rem;
-        }
-
-        /* Main Container */
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 32px;
         }
 
-        /* Grid Layout */
         .grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -62,7 +37,6 @@
             }
         }
 
-        /* Cards */
         .card {
             background: #111;
             border: 1px solid #2a2a2a;
@@ -76,12 +50,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
         }
 
         .card-header h2 {
-            font-size: 1.125rem;
+            font-size: 1rem;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -89,11 +61,10 @@
         }
 
         .badge {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             padding: 4px 10px;
             border-radius: 20px;
             font-weight: 500;
-            letter-spacing: 0.3px;
         }
 
         .badge-log { background: #0d4b6e; color: #7dd3fc; }
@@ -117,7 +88,7 @@
             color: #e0e0e0;
             padding: 8px 16px;
             border-radius: 8px;
-            font-size: 0.8125rem;
+            font-size: 0.75rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -128,113 +99,11 @@
             border-color: #4a4a4a;
             transform: translateY(-1px);
         }
-
-        button.primary {
-            background: #3b82f6;
-            border-color: #3b82f6;
-            color: white;
-        }
-
-        button.primary:hover {
-            background: #2563eb;
-        }
-
-        /* Counter Section */
-        .counter-section {
-            background: #111;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .counter-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            color: #3b82f6;
-        }
-
-        .counter-label {
-            color: #888;
-            font-size: 0.875rem;
-            margin-top: 4px;
-        }
-
-        /* Activity Log */
-        .log-panel {
-            background: #111;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-        }
-
-        .log-panel-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid #2a2a2a;
-            font-weight: 600;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #888;
-        }
-
-        .log-panel-content {
-            padding: 16px 20px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
-            font-size: 0.75rem;
-            background: #0a0a0a;
-        }
-
-        .log-entry {
-            padding: 6px 0;
-            border-bottom: 1px solid #1a1a1a;
-            color: #aaa;
-        }
-
-        .log-entry:last-child {
-            border-bottom: none;
-        }
-
-        .timestamp {
-            color: #555;
-            margin-right: 12px;
-        }
-
-        /* Utility */
-        .text-center { text-align: center; }
-        .mt-4 { margin-top: 16px; }
-        .mb-4 { margin-bottom: 16px; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>Mini Dev Browser · <span>Console Test Suite</span></h1>
-        <p>Professional testing environment for JavaScript Console validation</p>
-    </div>
-
     <div class="container">
-
-        <!-- Counter Card -->
-        <div class="counter-section">
-            <div>
-                <div class="counter-value" id="counterDisplay">0</div>
-                <div class="counter-label">Session Counter</div>
-            </div>
-            <div class="button-group">
-                <button onclick="incrementCounter()">+ Increment</button>
-                <button onclick="resetCounter()">↺ Reset</button>
-            </div>
-        </div>
-
-        <!-- Main Grid -->
         <div class="grid">
             
             <!-- LOG Card -->
@@ -245,10 +114,10 @@
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button onclick="sendLog('Simple log message')">Simple</button>
-                        <button onclick="sendLog('User logged in: developer')">With Variable</button>
-                        <button onclick="sendObjectLog()">Log Object</button>
-                        <button onclick="sendBatchLogs(5)">Batch (5)</button>
+                        <button onclick="simulateUserLogin()">👤 User Login</button>
+                        <button onclick="simulateDataLoad()">📦 Data Loaded</button>
+                        <button onclick="simulateObjectLog()">📊 Log User Object</button>
+                        <button onclick="simulateBatchLogs(5)">📑 Batch (5)</button>
                     </div>
                 </div>
             </div>
@@ -261,10 +130,10 @@
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button onclick="sendWarn('Simple warning')">Simple</button>
-                        <button onclick="sendWarn('Deprecated API usage')">Deprecation</button>
-                        <button onclick="sendWarn('Performance threshold exceeded')">Performance</button>
-                        <button onclick="sendBatchWarns(3)">Batch (3)</button>
+                        <button onclick="simulateDeprecatedAPI()">📢 Deprecated API</button>
+                        <button onclick="simulateHighMemory()">💾 High Memory Usage</button>
+                        <button onclick="simulateSlowResponse()">🐢 Slow Response</button>
+                        <button onclick="simulateBatchWarns(3)">⚠️ Batch (3)</button>
                     </div>
                 </div>
             </div>
@@ -277,10 +146,10 @@
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button onclick="sendError('Simple error')">Simple</button>
-                        <button onclick="sendError('Network request failed')">Network</button>
-                        <button onclick="sendError('Validation failed')">Validation</button>
-                        <button onclick="sendBatchErrors(3)">Batch (3)</button>
+                        <button onclick="simulateNetworkError()">🌐 Network Error</button>
+                        <button onclick="simulateValidationError()">📝 Validation Failed</button>
+                        <button onclick="simulateDBError()">🗄️ DB Connection Lost</button>
+                        <button onclick="simulateBatchErrors(3)">🔥 Batch (3)</button>
                     </div>
                 </div>
             </div>
@@ -293,162 +162,97 @@
                 </div>
                 <div class="card-body">
                     <div class="button-group">
-                        <button onclick="sendInfo('User action recorded')">User Action</button>
-                        <button onclick="sendInfo('System operational')">System Status</button>
-                        <button onclick="sendInfo('Loading complete')">Loading</button>
-                        <button onclick="sendBatchInfos(3)">Batch (3)</button>
+                        <button onclick="simulateUserAction()">🖱️ User Action</button>
+                        <button onclick="simulateHealthCheck()">🩺 Health Check</button>
+                        <button onclick="simulateAppLoad()">🚀 App Loaded</button>
+                        <button onclick="simulateBatchInfos(3)">ℹ️ Batch (3)</button>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Batch Operations -->
-        <div class="card" style="margin-bottom: 32px;">
-            <div class="card-header">
-                <h2>⚡ Batch Operations</h2>
-            </div>
-            <div class="card-body">
-                <div class="button-group">
-                    <button class="primary" onclick="sendAllTypes()">Send All Types (1 each)</button>
-                    <button class="primary" onclick="sendMixedBatch(10)">Send Mixed (10 messages)</button>
-                    <button onclick="clearConsole()">Clear Console</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Activity Log -->
-        <div class="log-panel">
-            <div class="log-panel-header">📋 Activity Log</div>
-            <div class="log-panel-content" id="activityLog">
-                <div class="log-entry"><span class="timestamp">●</span> Ready — Click any button to generate console output</div>
-            </div>
-        </div>
-
     </div>
 
     <script>
-        // Counter state
-        let sessionCounter = 0;
-
-        function updateCounterDisplay() {
-            document.getElementById('counterDisplay').innerText = sessionCounter;
+        // ============ LOG SCENARIOS ============
+        function simulateUserLogin() {
+            console.log(`User logged in: salhadin_dev (Role: developer) — Session ID: ${Math.random().toString(36).substr(2, 8)}`);
         }
 
-        function addActivityLog(message, type = 'info') {
-            const logContainer = document.getElementById('activityLog');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            const timestamp = new Date().toLocaleTimeString();
-            const icon = type === 'error' ? '❌' : (type === 'warn' ? '⚠️' : '✓');
-            entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${icon} ${message}`;
-            logContainer.insertBefore(entry, logContainer.firstChild);
-            
-            // Keep only last 20 entries
-            while(logContainer.children.length > 20) {
-                logContainer.removeChild(logContainer.lastChild);
-            }
+        function simulateDataLoad() {
+            console.log(`Data loaded successfully — 47 records fetched from API (Duration: 124ms)`);
         }
 
-        // ============ LOG Functions ============
-        function sendLog(message) {
-            console.log(`📄 ${message}`);
-            addActivityLog(`LOG: ${message}`);
+        function simulateObjectLog() {
+            const userProfile = {
+                id: 1001,
+                name: "Salhadin Assefa",
+                email: "salhadin@minidev.com",
+                preferences: { theme: "dark", notifications: true }
+            };
+            console.log("Current user profile:", userProfile);
         }
 
-        function sendObjectLog() {
-            const user = { id: 1001, name: 'Demo User', role: 'developer', active: true };
-            console.log('User object:', user);
-            addActivityLog('LOG: Object logged — { id: 1001, name: "Demo User", ... }');
-        }
-
-        function sendBatchLogs(count) {
+        function simulateBatchLogs(count) {
             for(let i = 1; i <= count; i++) {
-                console.log(`📄 Batch log ${i} — ${new Date().toLocaleTimeString()}`);
+                console.log(`[Batch ${i}] System heartbeat — Memory: ${Math.floor(Math.random() * 200 + 100)}MB`);
             }
-            addActivityLog(`LOG: ${count} messages sent`);
         }
 
-        // ============ WARN Functions ============
-        function sendWarn(message) {
-            console.warn(`⚠️ ${message}`);
-            addActivityLog(`WARN: ${message}`, 'warn');
+        // ============ WARN SCENARIOS ============
+        function simulateDeprecatedAPI() {
+            console.warn(`Deprecated API call detected: /api/v1/users/fetch — Use /api/v2/users/list instead`);
         }
 
-        function sendBatchWarns(count) {
+        function simulateHighMemory() {
+            console.warn(`High memory usage detected: 845MB (Threshold: 800MB)`);
+        }
+
+        function simulateSlowResponse() {
+            console.warn(`Slow API response: GET /api/dashboard took 3.2s (Expected: <1.5s)`);
+        }
+
+        function simulateBatchWarns(count) {
             for(let i = 1; i <= count; i++) {
-                console.warn(`⚠️ Batch warning ${i}`);
+                console.warn(`Warning ${i}: Threshold approaching 80%`);
             }
-            addActivityLog(`WARN: ${count} warnings sent`, 'warn');
         }
 
-        // ============ ERROR Functions ============
-        function sendError(message) {
-            console.error(`❌ ${message}`);
-            addActivityLog(`ERROR: ${message}`, 'error');
+        // ============ ERROR SCENARIOS ============
+        function simulateNetworkError() {
+            console.error(`Network request failed: ECONNREFUSED — Could not connect to https://api.example.com`);
         }
 
-        function sendBatchErrors(count) {
+        function simulateValidationError() {
+            console.error(`Form validation failed — Field: email. Invalid email format`);
+        }
+
+        function simulateDBError() {
+            console.error(`Database connection lost — Connection pool exhausted. (Active: 25/25)`);
+        }
+
+        function simulateBatchErrors(count) {
             for(let i = 1; i <= count; i++) {
-                console.error(`❌ Batch error ${i}`);
+                console.error(`Error ${i}: 500 Internal Server Error`);
             }
-            addActivityLog(`ERROR: ${count} errors sent`, 'error');
         }
 
-        // ============ INFO Functions ============
-        function sendInfo(message) {
-            console.info(`ℹ️ ${message}`);
-            addActivityLog(`INFO: ${message}`);
+        // ============ INFO SCENARIOS ============
+        function simulateUserAction() {
+            console.info(`User action recorded: Click — Target: save-button`);
         }
 
-        function sendBatchInfos(count) {
+        function simulateHealthCheck() {
+            console.info(`System health check — All services operational. DB: OK | Cache: OK | API: OK`);
+        }
+
+        function simulateAppLoad() {
+            console.info(`Application loaded successfully — Load time: 247ms`);
+        }
+
+        function simulateBatchInfos(count) {
             for(let i = 1; i <= count; i++) {
-                console.info(`ℹ️ Batch info ${i}`);
+                console.info(`Info ${i}: System event recorded`);
             }
-            addActivityLog(`INFO: ${count} info messages sent`);
-        }
-
-        // ============ Batch Functions ============
-        function sendAllTypes() {
-            console.log('📄 Test log message');
-            console.warn('⚠️ Test warning message');
-            console.error('❌ Test error message');
-            console.info('ℹ️ Test info message');
-            addActivityLog('BATCH: Sent 1 of each type (LOG, WARN, ERROR, INFO)');
-        }
-
-        function sendMixedBatch(total) {
-            const types = ['log', 'warn', 'error', 'info'];
-            for(let i = 1; i <= total; i++) {
-                const type = types[i % types.length];
-                switch(type) {
-                    case 'log': console.log(`📄 Mixed message #${i}`); break;
-                    case 'warn': console.warn(`⚠️ Mixed message #${i}`); break;
-                    case 'error': console.error(`❌ Mixed message #${i}`); break;
-                    case 'info': console.info(`ℹ️ Mixed message #${i}`); break;
-                }
-            }
-            addActivityLog(`BATCH: ${total} mixed messages sent`);
-        }
-
-        // ============ Counter Functions ============
-        function incrementCounter() {
-            sessionCounter++;
-            updateCounterDisplay();
-            console.log(`Counter value: ${sessionCounter}`);
-            addActivityLog(`Counter → ${sessionCounter}`);
-        }
-
-        function resetCounter() {
-            sessionCounter = 0;
-            updateCounterDisplay();
-            console.log(`Counter reset to: ${sessionCounter}`);
-            addActivityLog(`Counter reset to 0`);
-        }
-
-        // ============ Clear ============
-        function clearConsole() {
-            console.clear();
-            addActivityLog('Console cleared');
         }
     </script>
 </body>
