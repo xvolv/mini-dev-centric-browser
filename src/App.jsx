@@ -77,14 +77,15 @@ export default function App() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
 
-  const [networkLogs, setNetworkLogs] = useState({});
-  const [latestApiRequestByTab, setLatestApiRequestByTab] = useState({});
-  const [apiTesterDraftRequest, setApiTesterDraftRequest] = useState(null);
-  const [toolSettings, setToolSettings] = useState({
-    autoPopulateNetworkToApiTester: true,
-  });
-  const [consoleLogs, setConsoleLogs] = useState({});
-  const [bookmarks, setBookmarks] = useState([]);
+   const [networkLogs, setNetworkLogs] = useState({});
+   const [networkHistoryEntries, setNetworkHistoryEntries] = useState([]);
+   const [latestApiRequestByTab, setLatestApiRequestByTab] = useState({});
+   const [apiTesterDraftRequest, setApiTesterDraftRequest] = useState(null);
+   const [toolSettings, setToolSettings] = useState({
+     autoPopulateNetworkToApiTester: true,
+   });
+   const [consoleLogs, setConsoleLogs] = useState({});
+   const [bookmarks, setBookmarks] = useState([]);
 
   const [deviceSim, setDeviceSim] = useState({
     enabled: false,
@@ -178,23 +179,37 @@ export default function App() {
     });
   }, []);
 
-  const queuePendingApiRequest = useCallback((tabId, payload) => {
-    if (tabId == null || !payload) return;
+   const queuePendingApiRequest = useCallback((tabId, payload) => {
+     if (tabId == null || !payload) return;
 
-    const method = payload.method ? String(payload.method) : "";
-    const url = payload.url ? String(payload.url) : "";
-    if (!method || !url) return;
+     const method = payload.method ? String(payload.method) : "";
+     const url = payload.url ? String(payload.url) : "";
+     if (!method || !url) return;
 
-    const queue = pendingApiRequestsByTabRef.current.get(tabId) || [];
-    queue.unshift({
-      ...payload,
-      method,
-      url,
-      capturedAt: payload.capturedAt || Date.now(),
-    });
+     const queue = pendingApiRequestsByTabRef.current.get(tabId) || [];
+     queue.unshift({
+       ...payload,
+       method,
+       url,
+       capturedAt: payload.capturedAt || Date.now(),
+     });
 
-    pendingApiRequestsByTabRef.current.set(tabId, queue.slice(0, 25));
-  }, []);
+     pendingApiRequestsByTabRef.current.set(tabId, queue.slice(0, 25));
+   }, []);
+
+   const shouldIgnoreConsoleMessage = useCallback((message) => {
+     // Ignore common noise messages
+     const ignorePatterns = [
+       /Download the React DevTools/i,
+       /Warning: ReactDOM.render is no longer supported/i,
+       /Warning:.*is not a valid attribute/i,
+       /Warning:.*is using uppercase/i,
+       /Error:.*Minified React error/i,
+       /Warning:.*propTypes/i,
+     ];
+ 
+     return ignorePatterns.some((pattern) => pattern.test(message));
+   }, []);
 
   const consumePendingApiRequest = useCallback((tabId, entry) => {
     const queue = pendingApiRequestsByTabRef.current.get(tabId) || [];
