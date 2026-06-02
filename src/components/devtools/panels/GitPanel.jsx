@@ -34,6 +34,10 @@ export default function GitPanel() {
   const [repoQuery, setRepoQuery] = useState("");
   const [cloneDir, setCloneDir] = useState("");
   const [cloneBusy, setCloneBusy] = useState(false);
+  const [remotes, setRemotes] = useState([]);
+  const [remoteName, setRemoteName] = useState("origin");
+  const [remoteUrl, setRemoteUrl] = useState("");
+  const [showRemoteDialog, setShowRemoteDialog] = useState(false);
 
   const changedCount = files.length;
 
@@ -71,6 +75,11 @@ export default function GitPanel() {
         throw new Error(branchRes?.error || "Unable to read branches.");
       }
       setBranch(branchRes.branches.current || "");
+
+      const remoteRes = await window.electronAPI?.gitRemote?.(path);
+      if (remoteRes?.ok) {
+        setRemotes(remoteRes.remotes || []);
+      }
     } catch (err) {
       setError(err?.message || String(err));
     } finally {
@@ -233,6 +242,76 @@ export default function GitPanel() {
     }
   };
 
+  const handlePull = async () => {
+    if (!repoPath) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await window.electronAPI?.gitPull?.(repoPath);
+      if (!res?.ok) throw new Error(res?.error || "Pull failed.");
+      await loadRepoData(repoPath);
+    } catch (err) {
+      setError(err?.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePush = async () => {
+    if (!repoPath) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await window.electronAPI?.gitPush?.(repoPath);
+      if (!res?.ok) throw new Error(res?.error || "Push failed.");
+      await loadRepoData(repoPath);
+    } catch (err) {
+      setError(err?.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddRemote = async () => {
+    if (!repoPath || !remoteName || !remoteUrl) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await window.electronAPI?.gitRemoteAdd?.(
+        repoPath,
+        remoteName,
+        remoteUrl,
+      );
+      if (!res?.ok) throw new Error(res?.error || "Failed to add remote.");
+      setRemoteUrl("");
+      setShowRemoteDialog(false);
+      await loadRepoData(repoPath);
+    } catch (err) {
+      setError(err?.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetRemoteUrl = async (name, url) => {
+    if (!repoPath || !name || !url) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await window.electronAPI?.gitRemoteSetUrl?.(
+        repoPath,
+        name,
+        url,
+      );
+      if (!res?.ok) throw new Error(res?.error || "Failed to set remote URL.");
+      await loadRepoData(repoPath);
+    } catch (err) {
+      setError(err?.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="tool-panel">
       <div className="git-panel__status">
@@ -339,6 +418,20 @@ export default function GitPanel() {
             >
               Refresh
             </button>
+            <button
+              className="git-panel__repo-btn"
+              onClick={handlePull}
+              disabled={!repoPath || loading}
+            >
+              Pull
+            </button>
+            <button
+              className="git-panel__repo-btn"
+              onClick={handlePush}
+              disabled={!repoPath || loading}
+            >
+              Push
+            </button>
           </div>
         </div>
         {error && <div className="git-panel__error">{error}</div>}
@@ -350,6 +443,75 @@ export default function GitPanel() {
           </span>
         </div>
       </div>
+      {repoPath && (
+        <div className="git-panel__status">
+          <div className="git-panel__repo">
+            <span className="git-panel__repo-label">Remotes</span>
+            <div className="git-panel__repo-actions">
+              <button
+                className="git-panel__repo-btn"
+                onClick={() => setShowRemoteDialog(true)}
+                disabled={loading}
+              >
+                Add Remote
+              </button>
+            </div>
+          </div>
+          {remotes.length > 0 ? (
+            <div className="git-panel__remotes">
+              {remotes.map((remote, i) => (
+                <div key={`${remote.name}-${i}`} className="git-panel__remote">
+                  <span className="git-panel__remote-name">{remote.name}</span>
+                  <span className="git-panel__remote-url">{remote.refs.fetch}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="git-panel__file git-panel__file--empty">
+              No remotes configured.
+            </div>
+          )}
+          {showRemoteDialog && (
+            <div className="git-panel__remote-dialog">
+              <div className="git-panel__remote-dialog-content">
+                <h3>Add Remote</h3>
+                <input
+                  className="git-panel__remote-input"
+                  type="text"
+                  placeholder="Remote name (e.g., origin)"
+                  value={remoteName}
+                  onChange={(e) => setRemoteName(e.target.value)}
+                />
+                <input
+                  className="git-panel__remote-input"
+                  type="text"
+                  placeholder="Remote URL (e.g., https://github.com/user/repo.git)"
+                  value={remoteUrl}
+                  onChange={(e) => setRemoteUrl(e.target.value)}
+                />
+                <div className="git-panel__remote-dialog-actions">
+                  <button
+                    className="git-panel__repo-btn"
+                    onClick={handleAddRemote}
+                    disabled={!remoteName || !remoteUrl || loading}
+                  >
+                    Add
+                  </button>
+                  <button
+                    className="git-panel__repo-btn"
+                    onClick={() => {
+                      setShowRemoteDialog(false);
+                      setRemoteUrl("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <div className="tool-panel__header">
         <span className="tool-panel__title">Changed Files</span>
         <span className="tool-panel__badge tool-panel__badge--warn">

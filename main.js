@@ -1107,6 +1107,59 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle("git:pull", async (_event, repoPath) => {
+    try {
+      const git = await getRepoGit(repoPath);
+      const status = await git.status();
+      const currentBranch =
+        status?.current || status?.branch || status?.currentBranch || "";
+      if (!currentBranch) {
+        return { ok: false, error: "No active branch to pull." };
+      }
+
+      await git.pull("origin", currentBranch);
+      return { ok: true, branch: currentBranch };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("git:remote", async (_event, repoPath) => {
+    try {
+      const git = await getRepoGit(repoPath);
+      const remotes = await git.getRemotes(true);
+      return { ok: true, remotes };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("git:remoteAdd", async (_event, repoPath, name, url) => {
+    try {
+      if (!name || !url) {
+        return { ok: false, error: "Remote name and URL are required." };
+      }
+      const git = await getRepoGit(repoPath);
+      await git.addRemote(name, url);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("git:remoteSetUrl", async (_event, repoPath, name, url) => {
+    try {
+      if (!name || !url) {
+        return { ok: false, error: "Remote name and URL are required." };
+      }
+      const git = await getRepoGit(repoPath);
+      await git.remote(["set-url", name, url]);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
+
   mainWindow.on("maximize", () => {
     mainWindow.webContents.send("window:maximized-change", true);
   });

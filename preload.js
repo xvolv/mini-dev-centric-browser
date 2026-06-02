@@ -23,15 +23,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
         throw err;
       }
     })(),
-  exportNetworkLogs: (payload) => ipcRenderer.invoke("network:export", payload),
-  exportNetworkLogs: async (payload) => {
-    try {
-      return await ipcRenderer.invoke("network:export", payload);
-    } catch (err) {
-      console.error("preload.exportNetworkLogs error:", err);
-      throw err;
-    }
-  },
+   exportNetworkLogs: async (payload) => {
+     try {
+       return await ipcRenderer.invoke("network:export", payload);
+     } catch (err) {
+       console.error("preload.exportNetworkLogs error:", err);
+       throw err;
+     }
+   },
   getNetworkHistory: (limit) => ipcRenderer.invoke("network:history", limit),
   onNetworkEvent: (callback) => {
     const listener = (_event, data) => callback(data);
@@ -49,6 +48,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   gitCommit: (repoPath, message) =>
     ipcRenderer.invoke("git:commit", repoPath, message),
   gitPush: (repoPath) => ipcRenderer.invoke("git:push", repoPath),
+  gitPull: (repoPath) => ipcRenderer.invoke("git:pull", repoPath),
+  gitRemote: (repoPath) => ipcRenderer.invoke("git:remote", repoPath),
+  gitRemoteAdd: (repoPath, name, url) =>
+    ipcRenderer.invoke("git:remoteAdd", repoPath, name, url),
+  gitRemoteSetUrl: (repoPath, name, url) =>
+    ipcRenderer.invoke("git:remoteSetUrl", repoPath, name, url),
   openExternal: (url) => ipcRenderer.invoke("shell:openExternal", url),
   githubDeviceCode: () => ipcRenderer.invoke("github:deviceCode"),
   githubPoll: (deviceCode) => ipcRenderer.invoke("github:poll", deviceCode),
