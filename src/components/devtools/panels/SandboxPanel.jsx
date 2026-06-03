@@ -254,7 +254,14 @@ function formatTimestamp(value) {
   }
 }
 
-function buildPreviewDocument() {
+function buildPreviewDocument(htmlContent, cssContent, jsContent) {
+  const userHtml = String(htmlContent || "");
+  const userCss = String(cssContent || "");
+  const userJs = String(jsContent || "");
+
+  // Escape closing script tags in user JS so they don't break the wrapping <script>
+  const safeJs = userJs.replace(/<\/script/gi, "<\\/script");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -308,9 +315,63 @@ function buildPreviewDocument() {
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     }
   </style>
+  <style id="sandbox-user-css">${userCss}</style>
 </head>
 <body>
-  <div id="sandbox-root"></div>
+  <div id="sandbox-root">${userHtml}</div>
+  <script>
+    (function () {
+      var parentBridge = window.parent;
+
+      var serializeError = function(error) {
+        if (!error) return 'Unknown error';
+        if (typeof error === 'string') return error;
+        var message = error.message || String(error);
+        var stack = error.stack ? '\n' + error.stack : '';
+        return message + stack;
+      };
+
+      var emit = function(type, message) {
+        parentBridge.postMessage({
+          source: 'sandbox-console',
+          type: type,
+          message: typeof message === 'string' ? message : String(message != null ? message : ''),
+          timestamp: Date.now(),
+        }, '*');
+      };
+
+      ['log', 'warn', 'error'].forEach(function(method) {
+        var original = console[method].bind(console);
+        console[method] = function() {
+          var args = Array.prototype.slice.call(arguments);
+          try {
+            var text = args.map(function(item) {
+              if (typeof item === 'string') return item;
+              try { return JSON.stringify(item, null, 2); } catch(e) { return String(item); }
+            }).join(' ');
+            emit(method, text);
+          } catch(e) {}
+          return original.apply(console, args);
+        };
+      });
+
+      window.addEventListener('error', function(event) {
+        var message = event && event.error ? serializeError(event.error) : String((event && event.message) || 'Uncaught error');
+        parentBridge.postMessage({ source: 'sandbox-console', type: 'error', message: message, timestamp: Date.now() }, '*');
+        parentBridge.postMessage({ source: 'sandbox-status', status: 'error', error: message, timestamp: Date.now() }, '*');
+      });
+
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event && event.reason;
+        var message = typeof reason === 'string' ? reason : serializeError(reason);
+        parentBridge.postMessage({ source: 'sandbox-console', type: 'error', message: message, timestamp: Date.now() }, '*');
+        parentBridge.postMessage({ source: 'sandbox-status', status: 'error', error: message, timestamp: Date.now() }, '*');
+      });
+
+      parentBridge.postMessage({ source: 'sandbox-status', status: 'rendered', timestamp: Date.now() }, '*');
+    })();
+  </script>
+  <script>${safeJs}</script>
 </body>
 </html>`;
 }
@@ -329,7 +390,7 @@ function downloadText(filename, text, mimeType = "text/plain") {
 }
 
 function downloadCombinedHtml(state) {
-  const html = buildPreviewDocument();
+  const html = buildPreviewDocument(state.html, state.css, state.js);
   downloadText("sandbox.html", html, "text/html");
 }
 
@@ -745,202 +806,30 @@ export default function SandboxPanel() {
     return () => window.removeEventListener("message", handleMessage);
   }, [handleMessage]);
 
-  // Create a blob URL for the iframe document instead of using srcDoc.
+  // Render preview by setting srcdoc on the iframe so the browser parses and
+  // executes all inline <script> tags reliably (doc.write does NOT execute
+  // scripts in Electron's sandboxed iframes).
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    const shell = buildPreviewDocument();
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) return;
 
-    const escapeText = (value) =>
-      String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-
-    const serializeError = (error) => {
-      if (!error) return "Unknown error";
-      if (typeof error === "string") return error;
-      const message = error.message || String(error);
-      const stack = error.stack ? "\n" + error.stack : "";
-      return message + stack;
-    };
-
-    const installUserStyle = () => {
-      let styleEl = doc.getElementById("sandbox-user-css");
-      if (!styleEl) {
-        styleEl = doc.createElement("style");
-        styleEl.id = "sandbox-user-css";
-        doc.head.appendChild(styleEl);
-      }
-      styleEl.textContent = String(renderedCss || "");
-    };
-
-    const renderError = (error, context) => {
-      const text = serializeError(error);
-      const root = doc.getElementById("sandbox-root");
-      if (!root) return;
-      root.innerHTML =
-        '<div class="sandbox-error"><div class="sandbox-error__title">' +
-        escapeText(context || "Sandbox error") +
-        "</div><div>" +
-        escapeText(text) +
-        "</div></div>";
-      setStatus("error");
-      setStatusMessage(text);
-      parent.postMessage(
-        {
-          source: "sandbox-status",
-          status: "error",
-          error: text,
-          timestamp: Date.now(),
-        },
-        "*",
-      );
-    };
+    // Compute preview URL / title
+    const activeName = activeFolderFile?.split("/").pop();
+    const fileName = activeName && (activeName.endsWith(".html") || activeName.endsWith(".htm"))
+      ? activeName
+      : "index.html";
+    setPreviewUrl(`sandbox:///${fileName}`);
+    setPreviewTitle(fileName);
 
     try {
-      doc.open();
-      doc.write(shell);
-      doc.close();
-    } catch (error) {
-      renderError(error, "Preview shell error");
-      return;
-    }
-
-    const root = doc.getElementById("sandbox-root");
-    if (!root) return;
-
-    try {
-      const htmlText = String(renderedHtml || "");
-      const parser = new DOMParser();
-      const parsed = parser.parseFromString(htmlText, "text/html");
-      const hasDocNodes =
-        parsed.querySelector("html") ||
-        parsed.querySelector("head") ||
-        parsed.querySelector("body");
-      const activeName = activeFolderFile?.split("/").pop();
-      const fileName = activeName && (activeName.endsWith(".html") || activeName.endsWith(".htm"))
-        ? activeName
-        : "index.html";
-      const nextUrl = `sandbox:///${fileName}`;
-      setPreviewUrl(nextUrl);
-
-      if (hasDocNodes) {
-        const title = parsed.title ? String(parsed.title) : "";
-        if (title) {
-          doc.title = title;
-          setPreviewTitle(title);
-        } else {
-          setPreviewTitle(fileName);
-        }
-
-        doc.head
-          .querySelectorAll("[data-sandbox-head]")
-          .forEach((node) => node.remove());
-
-        const allowedHeadTags = new Set(["META", "LINK", "STYLE", "BASE"]);
-        Array.from(parsed.head?.children || []).forEach((node) => {
-          if (!allowedHeadTags.has(node.tagName)) return;
-          const clone = doc.importNode(node, true);
-          clone.setAttribute("data-sandbox-head", "true");
-          doc.head.appendChild(clone);
-        });
-
-        root.innerHTML = String(parsed.body?.innerHTML || "");
-      } else {
-        root.innerHTML = htmlText;
-        setPreviewTitle(fileName);
-      }
-
-      installUserStyle();
-    } catch (error) {
-      renderError(error, "HTML render error");
-      return;
-    }
-
-    try {
-      const stringify = (value) => {
-        if (typeof value === "string") return value;
-        try {
-          return JSON.stringify(value, null, 2);
-        } catch {
-          return String(value);
-        }
-      };
-
-      const renderedJsText = String(renderedJs || "");
-      const isDefaultClickSnippet =
-        /getElementById\s*\(\s*['"]btn['"]\s*\)/.test(renderedJsText) ||
-        /Button clicked from the sandbox/.test(renderedJsText);
-
-      const bootstrapScript = doc.createElement("script");
-      bootstrapScript.textContent = `
-        (function () {
-          const parentBridge = window.parent;
-
-          const serializeError = (error) => {
-            if (!error) return 'Unknown error';
-            if (typeof error === 'string') return error;
-            const message = error.message || String(error);
-            const stack = error.stack ? '\n' + error.stack : '';
-            return message + stack;
-          };
-
-          const emit = (type, message) => {
-            parentBridge.postMessage({
-              source: 'sandbox-console',
-              type,
-              message: typeof message === 'string' ? message : String(message ?? ''),
-              timestamp: Date.now(),
-            }, '*');
-          };
-
-          ['log', 'warn', 'error'].forEach((method) => {
-            const original = console[method].bind(console);
-            console[method] = (...args) => {
-              try {
-                const text = args.map((item) => {
-                  if (typeof item === 'string') return item;
-                  try { return JSON.stringify(item, null, 2); } catch { return String(item); }
-                }).join(' ');
-                emit(method, text);
-              } catch {}
-              return original(...args);
-            };
-          });
-
-          window.addEventListener('error', (event) => {
-            const message = event?.error ? serializeError(event.error) : String(event?.message || 'Uncaught error');
-            parentBridge.postMessage({ source: 'sandbox-console', type: 'error', message, timestamp: Date.now() }, '*');
-            parentBridge.postMessage({ source: 'sandbox-status', status: 'error', error: message, timestamp: Date.now() }, '*');
-          });
-
-          window.addEventListener('unhandledrejection', (event) => {
-            const reason = event?.reason;
-            const message = typeof reason === 'string' ? reason : serializeError(reason);
-            parentBridge.postMessage({ source: 'sandbox-console', type: 'error', message, timestamp: Date.now() }, '*');
-            parentBridge.postMessage({ source: 'sandbox-status', status: 'error', error: message, timestamp: Date.now() }, '*');
-          });
-
-          parentBridge.postMessage({ source: 'sandbox-status', status: 'rendered', timestamp: Date.now() }, '*');
-        })();
-      `;
-      doc.body.appendChild(bootstrapScript);
-
-      {
-        const userScript = doc.createElement("script");
-        userScript.textContent = String(renderedJs || "");
-        doc.body.appendChild(userScript);
-      }
+      const fullDoc = buildPreviewDocument(renderedHtml, renderedCss, renderedJs);
+      iframe.srcdoc = fullDoc;
 
       setStatus("rendered");
       setStatusMessage("Rendered successfully");
     } catch (error) {
-      renderError(error, "JavaScript execution error");
+      setStatus("error");
+      setStatusMessage(error?.message || String(error));
     }
   }, [renderedHtml, renderedCss, renderedJs, activeFolderFile, renderTrigger]);
 
@@ -978,6 +867,7 @@ export default function SandboxPanel() {
       setRenderedHtml(html);
       setRenderedCss(css);
       setRenderedJs(js);
+      setRenderTrigger((prev) => prev + 1);
     }, 500);
 
     return () => {
@@ -2036,7 +1926,6 @@ export default function SandboxPanel() {
             className="sandbox__preview-iframe"
             title="Sandbox Preview"
             sandbox="allow-scripts allow-same-origin allow-forms"
-            srcDoc={buildPreviewDocument(renderedHtml, renderedCss, renderedJs)}
           />
         </section>
       </div>
