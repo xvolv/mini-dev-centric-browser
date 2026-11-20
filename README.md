@@ -1,44 +1,31 @@
 # Mini Dev-Centric Browser
 
-A developer-focused desktop browser built with Electron, Vite, and React. It combines a modern browsing experience with integrated dev tools panels so you can debug, inspect, and test without leaving the app.
-
-![App preview](src/public/image.png)
+A developer-focused desktop browser that combines everyday browsing with focused tools for debugging, inspection, and API work.
 
 ## Highlights
 
-- Multi-panel dev tools workspace with focused panels (Console, Network, Device Sim, Git, API Tester, AI Assistant, Settings, and more).
-- Electron + React UI for a fast desktop experience.
-- Vite-powered renderer build for quick iteration.
-- Configurable app settings via `app-config.json`.
-
-## Tech Stack
-
-- Electron (main process)
-- React + Vite (renderer)
+- Multi-panel workspace for Console, Network, Device Simulation, Git, API testing, AI assistance, and settings
+- Electron desktop shell with a React and Vite renderer
+- Monaco-powered editor experiences
 - Simple Git integration for project workflows
+- Configurable behavior through `app-config.json`
 
-## Project Structure
+## Technology
 
-- `main.js`: Electron main process entry.
-- `preload.js`, `webview-preload.js`: Preload bridges for renderer access.
-- `src/`: React renderer source.
-  - `components/`: UI panels and layout.
-  - `data/`: Sample data and tool definitions.
-- `app-config.json`: App-level configuration.
+- Electron
+- React and Vite
+- TypeScript/JavaScript
+- Monaco Editor
+- `simple-git`
 
-## Setup
+## Local development
 
 ```bash
 npm install
-```
-
-## Development
-
-```bash
 npm run dev
 ```
 
-This starts Vite and launches Electron once the dev server is ready.
+The development command starts Vite and launches Electron after the renderer is ready.
 
 ## Build
 
@@ -46,22 +33,13 @@ This starts Vite and launches Electron once the dev server is ready.
 npm run build
 ```
 
-Builds the renderer and packages the Electron app.
+The project uses Electron Builder for packaging. On Windows, packaging may require Developer Mode for symlink support.
 
-## Configuration
+## Project structure
 
-Update `app-config.json` to customize the app behavior. If you use environment variables, put them in `.env` (ignored by Git).
+- `main.js` — Electron main process
+- `preload.js` and `webview-preload.js` — renderer bridges
+- `src/` — React renderer and tool panels
+- `app-config.json` — application configuration
 
-## Scripts
-
-- `npm run dev`: Start Vite + Electron in dev mode.
-- `npm run build`: Build and package the app.
-- `npm run preview`: Preview the Vite build.
-
-## Notes
-
-- Build artifacts are ignored via `.gitignore` (e.g., `dist/`, `release/`, `node_modules/`).
-- Windows builds may require Developer Mode to avoid symlink errors during packaging.
-
-## License
-
+This is an experimental developer-tool project; interfaces and panels may continue to change.
